@@ -40,29 +40,25 @@ void renvoi (int sock) {
 /*------------------------------------------------------*/
 /*------------------------------------------------------*/
 main(int argc, char **argv) {
-	int 
-	socket_descriptor, 
 	/* descripteur de socket */
-	nouv_socket_descriptor, 
+	int socket_descriptor; 
 	/* [nouveau] descripteur de socket */
-	longueur_adresse_courante; 
+	int nouv_socket_descriptor; 
 	/* longueur d'adresse courante d'un client */
-	sockaddr_in 
-	adresse_locale, 
+	int longueur_adresse_courante; 
 	/* structure d'adresse locale*/
-	adresse_client_courant; 
+	sockaddr_in adresse_locale; 
 	/* adresse client courant */
-	hostent*
-	ptr_hote; 
+	sockaddr_in adresse_client_courant; 
 	/* les infos recuperees sur la machine hote */
-	servent*
-	ptr_service; 
+	hostent* ptr_hote; 
 	/* les infos recuperees sur le service de la machine */
-	char 
-	machine[TAILLE_MAX_NOM+1]; 
+	servent* ptr_service; 
 	/* nom de la machine locale */
-	gethostname(machine,TAILLE_MAX_NOM);
+	char machine[TAILLE_MAX_NOM+1]; 
 	/* recuperation du nom de la machine */
+	gethostname(machine,TAILLE_MAX_NOM);
+	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname(machine)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
