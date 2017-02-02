@@ -4,11 +4,14 @@ Serveur à lancer avant le client
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/types.h> 
+
 /* pour les sockets */
 #include <sys/socket.h>
 #include <netdb.h> 
+
 /* pour hostent, servent */
 #include <string.h> 
+
 /* pour bcopy, ... */  
 #define TAILLE_MAX_NOM 256
 typedef struct sockaddr sockaddr;
@@ -16,10 +19,10 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 	
-/*------------------------------------------------------*/
 void renvoi (int sock) {
 	char buffer[256];
 	int longueur;
+
 	if ((longueur = read(sock, buffer, sizeof(buffer))) <= 0) 
 		return;
 	
@@ -30,15 +33,15 @@ void renvoi (int sock) {
 	buffer[longueur+1] ='\0';
 	printf("message apres traitement : %s \n", buffer);  
 	printf("renvoi du message traite.\n");
+
 	/* mise en attente du programme pour simuler un delai de transmission */
 	sleep(3);
-	write(sock,buffer,strlen(buffer)+1);    
+	write(sock,buffer,strlen(buffer)+1);
 	printf("message envoye. \n");       
 	
 	return;
 }
-/*------------------------------------------------------*/
-/*------------------------------------------------------*/
+
 main(int argc, char **argv) {
 	/* descripteur de socket */
 	int socket_descriptor; 
@@ -58,6 +61,8 @@ main(int argc, char **argv) {
 	char machine[TAILLE_MAX_NOM+1]; 
 	/* recuperation du nom de la machine */
 	gethostname(machine,TAILLE_MAX_NOM);
+
+	int i = 0;
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname(machine)) == NULL) {
