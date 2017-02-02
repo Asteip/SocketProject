@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 	bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
 	adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
 	
-	/* 2 facons de definir le service que l'on va utiliser a distance (le même que sur le serveur) */
+	/* 2 façons de definir le service que l'on va utiliser a distance (le même que sur le serveur) */
 	/* (commenter l'une ou l'autre des solutions) */
 
 	/*-----------------------------------------------------------*/
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 	/*-----------------------------------------------------------*/
 
 	printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
-	
+
 	/* creation de la socket */
 	if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("erreur : impossible de creer la socket de connexion avec le serveur.");
