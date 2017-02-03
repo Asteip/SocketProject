@@ -61,27 +61,20 @@ int main(int argc, char **argv) {
 	/* copie caractere par caractere des infos de ptr_host vers adresse_locale */
 	bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
 	adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
-	
-	/* 2 façons de definir le service que l'on va utiliser a distance (le même que sur le serveur) */
-	/* (commenter l'une ou l'autre des solutions) */
 
-	/*-----------------------------------------------------------*/
 	/* SOLUTION 1 : utiliser un service existant, par ex. "irc" */
-	
 	/*
 	if ((ptr_service = getservbyname("irc","tcp")) == NULL) {
 		perror("erreur : impossible de recuperer le numero de port du service desire.");
 		exit(1);
 	}
-	
+
 	adresse_locale.sin_port = htons(ptr_service->s_port);
 	*/
 
-	/*-----------------------------------------------------------*/
 	/* SOLUTION 2 : utiliser un nouveau numero de port */
 
 	adresse_locale.sin_port = htons(5000);
-	/*-----------------------------------------------------------*/
 
 	printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
 
