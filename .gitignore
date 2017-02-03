@@ -1,0 +1,4 @@
+# ignore compile file and .o
+*.o
+client
+server
