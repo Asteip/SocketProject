@@ -62,8 +62,7 @@ main(int argc, char **argv) {
 	/* recuperation du nom de la machine */
 	gethostname(machine,TAILLE_MAX_NOM);
 
-	int i = 0;
-	
+
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname(machine)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
