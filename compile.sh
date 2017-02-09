@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Compile server
-gcc server.c -o server -lpthread
+gcc server.c vector.c -o server -lpthread
 
 # Compile client
-gcc client.c -o client -lpthread
+gcc client.c vector.c -o client -lpthread
