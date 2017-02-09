@@ -1,7 +1,3 @@
-/*-----------------------------------------------------------
-Client a lancer apres le serveur avec la commande :
-client <adresse-serveur> <message-a-transmettre>
-------------------------------------------------------------*/
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/types.h>
@@ -14,31 +10,60 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-void *envoyer(int socket, char* msg){
-	printf("Création du thread pour envoi de message \n");
-	if ((write(socket, msg, strlen(msg))) < 0) {
+typedef struct arg_thread_envoyer {
+	int sock;
+	char *mesg;
+} arg_thread_envoyer;
+
+typedef struct arg_thread_lire {
+	int sock;
+} arg_thread_lire;
+
+/* entier égal à 1 tant que la connexion est établie */
+int is_connect = 0;
+
+void *envoyer(void *pArgs){
+	arg_thread_envoyer * args = pArgs;
+
+	// tester si mesg contient /quit
+
+	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) {
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
 		exit(1);
 	}
-	//pthread_exit(NULL);
+
+	//sleep(3);
+
+	pthread_exit(NULL);
 }
 
-void *lire(int socket, char *buffer){
-	printf("Création du thread pour lire un message \n");
+void *lire(void *pArgs){
+	char buffer[256];
 	int longueur;
-	while((longueur = read(socket, buffer, sizeof(buffer))) > 0) {
+	arg_thread_lire * args = pArgs;
+
+	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
 		printf("reponse du serveur : \n");
 		write(1,buffer,longueur);
 	}
+
+	is_connect = 0;
 	pthread_exit(NULL);
+}
+
+void clean(const char *buffer, FILE *fp){
+    char *p = strchr(buffer,'\n');
+    if (p != NULL)
+        *p = 0;
+    else{
+        int c;
+        while ((c = fgetc(fp)) != '\n' && c != EOF);
+    }
 }
 
 int main(int argc, char **argv) {
 	/* descripteur de socket */
 	int socket_descriptor; 
-	
-	/* longueur d'un buffer utilisé */
-	int longueur; 
 	
 	/* adresse de socket local */
 	sockaddr_in adresse_locale; 
@@ -50,33 +75,32 @@ int main(int argc, char **argv) {
 	servent * ptr_service; 
 	
 	/* nom du programme */
-	char buffer[256];
 	char * prog; 
 	
 	/* nom de la machine distante */
 	char * host; 
 	
 	/* message envoyé */
-	char * mesg; 
+	char mesg[256] = "";
 
 	/* thread pour l'envoi de message */
 	pthread_t thread_envoi;
+	arg_thread_envoyer params_envoyer;
 
 	/* thread pour la lecture de message */
 	pthread_t thread_lecture;
+	arg_thread_lire params_lire;
 	
-	if (argc != 3) {
-		perror("usage : client <adresse-serveur> <message-a-transmettre>");
+	if (argc != 2) {
+		perror("usage : client <adresse-serveur>");
 		exit(1);
 	}
 
 	prog = argv[0];
 	host = argv[1];
-	mesg = argv[2];
 
 	printf("nom de l'executable : %s \n", prog);
 	printf("adresse du serveur  : %s \n", host);
-	printf("message envoye      : %s \n", mesg);
 
 	if ((ptr_host = gethostbyname(host)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son adresse.");
@@ -86,18 +110,6 @@ int main(int argc, char **argv) {
 	/* copie caractere par caractere des infos de ptr_host vers adresse_locale */
 	bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
 	adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
-
-	/* SOLUTION 1 : utiliser un service existant, par ex. "irc" */
-	/*
-	if ((ptr_service = getservbyname("irc","tcp")) == NULL) {
-		perror("erreur : impossible de recuperer le numero de port du service desire.");
-		exit(1);
-	}
-
-	adresse_locale.sin_port = htons(ptr_service->s_port);
-	*/
-
-	/* SOLUTION 2 : utiliser un nouveau numero de port */
 
 	adresse_locale.sin_port = htons(5000);
 
@@ -116,34 +128,27 @@ int main(int argc, char **argv) {
 	}
 
 	printf("connexion etablie avec le serveur. \n");
-	printf("envoi d'un message au serveur. \n");
 
-	/* envoi du message vers le serveur 
-	if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
-		perror("erreur : impossible d'ecrire le message destine au serveur.");
+	is_connect = 1;
+
+	params_lire.sock = socket_descriptor;
+	if(pthread_create(&thread_lecture, NULL, lire, (void *) &params_lire) == -1) {
+		perror("pthread_create : lire");
 		exit(1);
-	}*/
-	
-	if(pthread_create(&thread_envoi, NULL, envoyer(socket_descriptor,mesg), NULL) != 0) {
-		perror("pthread_envoi create");
-		return EXIT_FAILURE;
-	}
+    }
 
-	/* mise en attente du prgramme pour simuler un delai de transmission */
-	sleep(3);
-	printf("message envoye au serveur. \n");
+	while(is_connect == 1){
+		printf("Message:\n");
+    	fgets(mesg, sizeof(mesg), stdin);
+    	clean(mesg, stdin);
 
-	 //lecture de la reponse en provenance du serveur 
-	while((longueur = read(socket_descriptor, buffer, sizeof(buffer))) > 0) {
-		printf("reponse du serveur : \n");
-		write(1,buffer,longueur);
-	}
-
-	/*if(pthread_create(&thread_lecture, NULL, lire(socket_descriptor,buffer), NULL) != 0) {
-		perror("pthread_lecture create");
-		return EXIT_FAILURE;
-	}*/
-
+    	params_envoyer.sock = socket_descriptor;
+    	params_envoyer.mesg = mesg;
+    	if(pthread_create(&thread_envoi, NULL, envoyer, (void *) &params_envoyer) == -1) {
+			perror("pthread_envoi create");
+			exit(1);
+		}
+	}	
 
 	printf("\nfin de la reception.\n");
 	close(socket_descriptor);
