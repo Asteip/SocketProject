@@ -78,12 +78,13 @@ main(int argc, char **argv) {
 
 	/* recuperation du nom de la machine */
 	gethostname(machine,TAILLE_MAX_NOM);
+	
 
 	/* thread pour chaque connexion cliente */
 	pthread_t thread;
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
-	if ((ptr_hote = gethostbyname(machine)) == NULL) {
+	if ((ptr_hote = gethostbyname("localhost")) == NULL) { //localhost en dur car problème pc Sitraka
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
 		exit(1);
 	}

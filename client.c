@@ -14,6 +14,25 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
+void *envoyer(int socket, char* msg){
+	printf("Création du thread pour envoi de message \n");
+	if ((write(socket, msg, strlen(msg))) < 0) {
+		perror("erreur : impossible d'ecrire le message destine au serveur.");
+		exit(1);
+	}
+	//pthread_exit(NULL);
+}
+
+void *lire(int socket, char *buffer){
+	printf("Création du thread pour lire un message \n");
+	int longueur;
+	while((longueur = read(socket, buffer, sizeof(buffer))) > 0) {
+		printf("reponse du serveur : \n");
+		write(1,buffer,longueur);
+	}
+	pthread_exit(NULL);
+}
+
 int main(int argc, char **argv) {
 	/* descripteur de socket */
 	int socket_descriptor; 
@@ -39,6 +58,12 @@ int main(int argc, char **argv) {
 	
 	/* message envoyé */
 	char * mesg; 
+
+	/* thread pour l'envoi de message */
+	pthread_t thread_envoi;
+
+	/* thread pour la lecture de message */
+	pthread_t thread_lecture;
 	
 	if (argc != 3) {
 		perror("usage : client <adresse-serveur> <message-a-transmettre>");
@@ -93,21 +118,32 @@ int main(int argc, char **argv) {
 	printf("connexion etablie avec le serveur. \n");
 	printf("envoi d'un message au serveur. \n");
 
-	/* envoi du message vers le serveur */
+	/* envoi du message vers le serveur 
 	if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
 		exit(1);
+	}*/
+	
+	if(pthread_create(&thread_envoi, NULL, envoyer(socket_descriptor,mesg), NULL) != 0) {
+		perror("pthread_envoi create");
+		return EXIT_FAILURE;
 	}
 
 	/* mise en attente du prgramme pour simuler un delai de transmission */
 	sleep(3);
 	printf("message envoye au serveur. \n");
 
-	/* lecture de la reponse en provenance du serveur */
+	 //lecture de la reponse en provenance du serveur 
 	while((longueur = read(socket_descriptor, buffer, sizeof(buffer))) > 0) {
 		printf("reponse du serveur : \n");
 		write(1,buffer,longueur);
 	}
+
+	/*if(pthread_create(&thread_lecture, NULL, lire(socket_descriptor,buffer), NULL) != 0) {
+		perror("pthread_lecture create");
+		return EXIT_FAILURE;
+	}*/
+
 
 	printf("\nfin de la reception.\n");
 	close(socket_descriptor);
