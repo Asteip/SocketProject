@@ -1,20 +1,12 @@
-/*----------------------------------------------
-Serveur à lancer avant le client
-------------------------------------------------*/
 #include <stdlib.h>
 #include <stdio.h>
 #include <linux/types.h> 
 #include <pthread.h>
 #include "vector.h"
-
-/* pour les sockets */
 #include <sys/socket.h>
 #include <netdb.h> 
-
-/* pour hostent, servent */
 #include <string.h> 
 
-/* pour bcopy, ... */  
 #define TAILLE_MAX_NOM 256
 
 typedef struct sockaddr sockaddr;
@@ -24,6 +16,7 @@ typedef struct servent servent;
 
 typedef struct arg_thread {
 	int sock;
+	int position;
 } arg_thread;
 
 /* déclaration du vector qui va contenir tous les clients */
@@ -36,7 +29,7 @@ void *connection(void * pArgs){
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0){
 
-		sleep(3);
+		//sleep(3);
 
 		/* envoi du message a tous les autres utilisateurs */
 		for(int i = 0 ; i < vector_total(&list_client) ; i++){
@@ -44,6 +37,7 @@ void *connection(void * pArgs){
 		}
 	}
 
+	vector_delete(&list_client, args->position);
 	close((int) args->sock);
 	pthread_exit(NULL);
 }
@@ -76,11 +70,8 @@ main(int argc, char **argv) {
 	/* recuperation du nom de la machine */
 	gethostname(machine,TAILLE_MAX_NOM);
 	
-
 	/* thread pour chaque connexion cliente */
 	pthread_t thread;
-
-	/* arguments de chaque thread */
 	arg_thread params;
 
 	/* vector contenant chaque connexion cliente */
@@ -131,6 +122,7 @@ main(int argc, char **argv) {
 		else{
 			vector_add(&list_client, nouv_socket_descriptor);
 			params.sock = nouv_socket_descriptor;
+			params.position = vector_total(&list_client) - 1;
 			if(pthread_create(&thread, NULL, connection, (void *) &params) == -1) {
 				perror("pthread_create");
 				exit(1);
