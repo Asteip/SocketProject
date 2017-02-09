@@ -20,7 +20,8 @@ void *envoyer(int socket, char* msg){
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
 		exit(1);
 	}
-	//pthread_exit(NULL);
+	printf("fermeture du thread \n");
+	pthread_exit(NULL);
 }
 
 void *lire(int socket, char *buffer){
@@ -133,16 +134,16 @@ int main(int argc, char **argv) {
 	sleep(3);
 	printf("message envoye au serveur. \n");
 
-	 //lecture de la reponse en provenance du serveur 
+	 /*lecture de la reponse en provenance du serveur 
 	while((longueur = read(socket_descriptor, buffer, sizeof(buffer))) > 0) {
 		printf("reponse du serveur : \n");
 		write(1,buffer,longueur);
-	}
-
-	/*if(pthread_create(&thread_lecture, NULL, lire(socket_descriptor,buffer), NULL) != 0) {
+	}*/
+	printf("eto\n");
+	if(pthread_create(&thread_lecture, NULL, lire(socket_descriptor,buffer), NULL) != 0) {
 		perror("pthread_lecture create");
 		return EXIT_FAILURE;
-	}*/
+	}
 
 
 	printf("\nfin de la reception.\n");
