@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <linux/types.h> 
 #include <pthread.h>
-#include "vector.h"
 #include <sys/socket.h>
 #include <netdb.h> 
 #include <string.h> 
+#include "vector.h"
 
 #define TAILLE_MAX_NOM 256
 
@@ -20,29 +20,53 @@ typedef struct arg_thread {
 } arg_thread;
 
 /* déclaration du vector qui va contenir tous les clients */
-vector list_client;
+vector *list_client = NULL;
 
-void *connection(void * pArgs){
+void *connection(void *pArgs){
 	char buffer[256];
 	int longueur;
-	arg_thread * args = pArgs;
+	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
+
+	printf("Connexion du client %d\n", args->position);
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0){
 
 		//sleep(3);
 
+		char quitCmd[] = "/quit";
+		char wCmd[] = "/w";
+
+		if(buffer[0] == '/'){
+			if(strstr(buffer, quitCmd) != NULL){
+				char whoQuit[] = "Le client ";
+				sprintf(whoQuit, "%d", args->position);
+				strcat(whoQuit, " s'est déconnecté.");
+
+				for(int i = 0 ; i < vector_size(list_client) ; ++i){
+					write(vector_get(list_client, i), buffer, strlen(buffer)+1);
+				}
+			}
+
+			if(strstr(buffer, wCmd) != NULL){
+				// A implémenter -> fonction message privé.
+			}
+		}
+
 		/* envoi du message a tous les autres utilisateurs */
-		for(int i = 0 ; i < vector_total(&list_client) ; i++){
-			write(vector_get(&list_client, i), buffer, strlen(buffer)+1);
+		for(int i = 0 ; i < vector_size(list_client) ; ++i){
+			write(vector_get(list_client, i), buffer, strlen(buffer)+1);
 		}
 	}
 
-	vector_delete(&list_client, args->position);
-	close((int) args->sock);
+	printf("Déconnexion du client %d\n", args->position);
+
+	close(args->sock);
+	vector_delete(list_client, args->position);
+	free(args);
 	pthread_exit(NULL);
 }
 
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
 	/* descripteur de socket */
 	int socket_descriptor; 
 
@@ -72,10 +96,8 @@ main(int argc, char **argv) {
 	
 	/* thread pour chaque connexion cliente */
 	pthread_t thread;
-	arg_thread params;
 
-	/* vector contenant chaque connexion cliente */
-	vector_init(&list_client);
+	list_client = vector_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname("localhost")) == NULL) { //localhost en dur car problème pc Sitraka
@@ -120,15 +142,18 @@ main(int argc, char **argv) {
 			exit(1);
 		}
 		else{
-			vector_add(&list_client, nouv_socket_descriptor);
-			params.sock = nouv_socket_descriptor;
-			params.position = vector_total(&list_client) - 1;
-			if(pthread_create(&thread, NULL, connection, (void *) &params) == -1) {
+			vector_add(list_client, nouv_socket_descriptor);
+
+			arg_thread * params = malloc(sizeof(arg_thread));
+			params->sock = nouv_socket_descriptor;
+			params->position = vector_size(list_client) - 1;
+
+			if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {
 				perror("pthread_create");
 				exit(1);
 		    }
 		}
-	}    
+	} 
 
 	exit(0);
 }

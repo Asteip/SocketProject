@@ -10,22 +10,34 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-typedef struct arg_thread_envoyer {
+typedef struct arg_thread_envoi {
 	int sock;
 	char *mesg;
-} arg_thread_envoyer;
+} arg_thread_envoi;
 
-typedef struct arg_thread_lire {
+typedef struct arg_thread_reception {
 	int sock;
-} arg_thread_lire;
+} arg_thread_reception;
 
 /* entier égal à 1 tant que la connexion est établie */
 int is_connect = 0;
 
-void *envoyer(void *pArgs){
-	arg_thread_envoyer * args = pArgs;
+void *envoi(void *pArgs){
+	arg_thread_envoi *args = pArgs;
 
-	// tester si mesg contient /quit
+	char quitCmd[] = "/quit";
+	char wCmd[] = "/w";
+
+	if(args->mesg[0] == '/'){
+		if(strstr(args->mesg, quitCmd) != NULL){
+			is_connect = 0;
+			printf("Déconnexion... \n");
+		}
+
+		if(strstr(args->mesg, wCmd) != NULL){
+			// A implémenter -> fonction message privé.
+		}
+	}
 
 	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) {
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
@@ -37,13 +49,13 @@ void *envoyer(void *pArgs){
 	pthread_exit(NULL);
 }
 
-void *lire(void *pArgs){
+void *reception(void *pArgs){
 	char buffer[256];
 	int longueur;
-	arg_thread_lire * args = pArgs;
+	arg_thread_reception * args = pArgs;
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
-		printf("reponse du serveur : \n");
+		printf("Reponse du serveur : \n");
 		write(1,buffer,longueur);
 	}
 
@@ -85,11 +97,11 @@ int main(int argc, char **argv) {
 
 	/* thread pour l'envoi de message */
 	pthread_t thread_envoi;
-	arg_thread_envoyer params_envoyer;
+	arg_thread_envoi params_envoi;
 
 	/* thread pour la lecture de message */
-	pthread_t thread_lecture;
-	arg_thread_lire params_lire;
+	pthread_t thread_reception;
+	arg_thread_reception params_reception;
 	
 	if (argc != 2) {
 		perror("usage : client <adresse-serveur>");
@@ -131,21 +143,23 @@ int main(int argc, char **argv) {
 
 	is_connect = 1;
 
-	params_lire.sock = socket_descriptor;
-	if(pthread_create(&thread_lecture, NULL, lire, (void *) &params_lire) == -1) {
-		perror("pthread_create : lire");
+	params_reception.sock = socket_descriptor;
+
+	if(pthread_create(&thread_reception, NULL, reception, (void *) &params_reception) == -1) {
+		perror("pthread_create : reception");
 		exit(1);
     }
 
 	while(is_connect == 1){
-		printf("Message:\n");
+		printf("Message: ");
     	fgets(mesg, sizeof(mesg), stdin);
     	clean(mesg, stdin);
 
-    	params_envoyer.sock = socket_descriptor;
-    	params_envoyer.mesg = mesg;
-    	if(pthread_create(&thread_envoi, NULL, envoyer, (void *) &params_envoyer) == -1) {
-			perror("pthread_envoi create");
+    	params_envoi.sock = socket_descriptor;
+    	params_envoi.mesg = mesg;
+
+    	if(pthread_create(&thread_envoi, NULL, envoi, (void *) &params_envoi) == -1) {
+			perror("pthread_create ; envoi");
 			exit(1);
 		}
 	}	
@@ -153,5 +167,6 @@ int main(int argc, char **argv) {
 	printf("\nfin de la reception.\n");
 	close(socket_descriptor);
 	printf("connexion avec le serveur fermee, fin du programme.\n");
+
 	exit(0);
 }
