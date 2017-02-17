@@ -55,12 +55,24 @@ void *reception(void *pArgs){
 	arg_thread_reception * args = pArgs;
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
+		buffer[longueur+1] = '\0';
+		printf("longueur du msg : %d\n", longueur );
 		printf("Reponse du serveur : \n");
 		write(1,buffer,longueur);
+		printf("\n");
+		buffer[0] = '\0';
+		cleanBuffer(&buffer); // ici 
 	}
 
 	is_connect = 0;
 	pthread_exit(NULL);
+}
+
+// fonction marche pas
+void cleanBuffer(char* buffer){
+	for(int i = 0 ; i < sizeof(buffer); ++i){
+		buffer[i] = ' ';
+	}
 }
 
 void clean(const char *buffer, FILE *fp){
