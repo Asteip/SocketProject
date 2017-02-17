@@ -51,6 +51,23 @@ int vector_get(vector *v, int index){
     return ret;
 }
 
+int vector_search(vector *v, int item){
+    int i = 0;
+    int found = 0;
+    int result = -1;
+
+    while(i < v->size && found == 0){
+        if(v->items[i] == item){
+            found = 1;
+            result = i;
+        }
+
+        i++;
+    }
+
+    return result;
+}
+
 void vector_delete(vector *v, int index){
     if (index < 0 || index >= v->size){
         printf("ERROR : there is no items at this index.\n");

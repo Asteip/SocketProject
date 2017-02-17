@@ -16,7 +16,6 @@ typedef struct servent servent;
 
 typedef struct arg_thread {
 	int sock;
-	int position;
 } arg_thread;
 
 /* déclaration du vector qui va contenir tous les clients */
@@ -26,10 +25,11 @@ void *connection(void *pArgs){
 	char buffer[256];
 	int longueur;
 	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
+	int is_connected = 1;
 
-	printf("Connexion du client %d\n", args->position);
+	printf("Connexion du client %d\n", args->sock);
 
-	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0){
+	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && is_connected == 1){
 
 		//sleep(3);
 
@@ -38,30 +38,36 @@ void *connection(void *pArgs){
 
 		if(buffer[0] == '/'){
 			if(strstr(buffer, quitCmd) != NULL){
-				char whoQuit[] = "Le client ";
-				sprintf(whoQuit, "%d", args->position);
-				strcat(whoQuit, " s'est déconnecté.");
+				char whoQuit[30];
+				char bufPos[6];
+
+				strcpy(whoQuit, "Déconnexion du client : ");
+				sprintf(bufPos, "%d", args->sock);
+				strcat(whoQuit, bufPos);
 
 				for(int i = 0 ; i < vector_size(list_client) ; ++i){
-					write(vector_get(list_client, i), buffer, strlen(buffer)+1);
+					write(vector_get(list_client, i), whoQuit, strlen(whoQuit) + strlen(bufPos) + 1);
 				}
+
+				is_connected = 0;
 			}
 
 			if(strstr(buffer, wCmd) != NULL){
 				// A implémenter -> fonction message privé.
 			}
 		}
-
-		/* envoi du message a tous les autres utilisateurs */
-		for(int i = 0 ; i < vector_size(list_client) ; ++i){
-			write(vector_get(list_client, i), buffer, strlen(buffer)+1);
+		else{
+			/* envoi du message a tous les autres utilisateurs */
+			for(int i = 0 ; i < vector_size(list_client) ; ++i){
+				write(vector_get(list_client, i), buffer, strlen(buffer)+1);
+			}
 		}
 	}
 
-	printf("Déconnexion du client %d\n", args->position);
+	printf("Déconnexion du client %d\n", args->sock);
 
 	close(args->sock);
-	vector_delete(list_client, args->position);
+	vector_delete(list_client, vector_search(list_client, args->sock));
 	free(args);
 	pthread_exit(NULL);
 }
@@ -146,7 +152,6 @@ int main(int argc, char **argv) {
 
 			arg_thread * params = malloc(sizeof(arg_thread));
 			params->sock = nouv_socket_descriptor;
-			params->position = vector_size(list_client) - 1;
 
 			if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {
 				perror("pthread_create");

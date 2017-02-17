@@ -69,6 +69,11 @@ int vector_get(vector *, int);
 void vector_delete(vector *, int);
 
 /*!
+ * \brief Recherche l'index de l'élément passé en paramètre
+ */
+int vector_search(vector *, int);
+
+/*!
  * \brief Libère la mémoire du tableau d'entiers
  * \param vector* Le vector à détruire
  */
