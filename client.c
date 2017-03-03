@@ -54,7 +54,7 @@ void *reception(void *pArgs){
 	int longueur;
 	arg_thread_reception * args = pArgs;
 
-	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
+	while(is_connect == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
 		buffer[longueur+1] = '\0';
 		printf("longueur du msg : %d\n", longueur );
 		printf("Reponse du serveur : \n");
@@ -63,8 +63,14 @@ void *reception(void *pArgs){
 		buffer[0] = '\0';
 		cleanBuffer(&buffer); // ici 
 	}
-
+	
+	// arrêt du programme si le client ne reçoit plus de message
 	is_connect = 0;
+	
+	printf("\nfin de la reception.\n");
+	close(args->sock);
+	printf("connexion avec le serveur fermee, fin du programme.\n");
+	
 	pthread_exit(NULL);
 }
 
@@ -175,10 +181,6 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 	}	
-
-	printf("\nfin de la reception.\n");
-	close(socket_descriptor);
-	printf("connexion avec le serveur fermee, fin du programme.\n");
 
 	exit(0);
 }
