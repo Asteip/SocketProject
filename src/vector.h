@@ -6,8 +6,6 @@
 /*!
  * \brief Structure de type vector pour un tableau d'entier
  * \details Permet de manipuler dynamiquement la taille d'un tableau d'entiers
- * d'entier
- * \ref http://eddmann.com/posts/implementing-a-dynamic-vector-array-in-c
  */
 
 typedef struct vector {
@@ -70,6 +68,7 @@ void vector_delete(vector *, int);
 
 /*!
  * \brief Recherche l'index de l'élément passé en paramètre
+ * \param int l'élément à rechercher dans le tableau
  */
 int vector_search(vector *, int);
 

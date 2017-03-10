@@ -16,18 +16,19 @@ typedef struct servent servent;
 
 typedef struct arg_thread {
 	int sock;
+	char* pseudo;
 } arg_thread;
 
-/* déclaration du vector qui va contenir tous les clients */
+/* vector qui va contenir tous les clients */
 vector *list_client = NULL;
 
 void *connection(void *pArgs){
 	char buffer[256];
-	int longueur;
-	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
+	int longueur = 0;
 	int is_connected = 1;
+	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
 
-	printf("Connexion du client %d\n", args->sock);
+	printf("Connexion du client %s (num : %d)\n", args->pseudo, args->sock);
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && is_connected == 1){
 
@@ -35,8 +36,12 @@ void *connection(void *pArgs){
 
 		char quitCmd[] = "/quit";
 		char wCmd[] = "/w";
+		char fileCmd[] = "/file";
 
+		// Si le début de la ligne commence par "/" on regarde si c'est une commande
 		if(buffer[0] == '/'){
+			
+			// COMMANDE quit (quitter le serveur)
 			if(strstr(buffer, quitCmd) != NULL){
 				char whoQuit[30];
 				char bufPos[6];
@@ -52,8 +57,14 @@ void *connection(void *pArgs){
 				is_connected = 0;
 			}
 
+			// COMMANDE w (message privé)
 			if(strstr(buffer, wCmd) != NULL){
 				// A implémenter -> fonction message privé.
+			}
+
+			// COMMANDE file (envoi de fichier)
+			if(strstr(buffer, fileCmd) != NULL){
+				// A implémenter -> envoi de fichier.
 			}
 		}
 		else{
@@ -64,6 +75,7 @@ void *connection(void *pArgs){
 		}
 	}
 
+	// Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté
 	printf("Déconnexion du client %d\n", args->sock);
 
 	close(args->sock);
@@ -104,6 +116,8 @@ int main(int argc, char **argv) {
 	pthread_t thread;
 
 	list_client = vector_create();
+
+	int longueur_message_pseudo;
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname("localhost")) == NULL) { //localhost en dur car problème pc Sitraka
@@ -145,18 +159,22 @@ int main(int argc, char **argv) {
 		/* adresse_client_courant sera renseignée par accept via les infos du connect */
 		if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante)) < 0) {
 			perror("erreur : impossible d'accepter la connexion avec le client.");
-			exit(1);
 		}
 		else{
-			vector_add(list_client, nouv_socket_descriptor);
-
 			arg_thread * params = malloc(sizeof(arg_thread));
 			params->sock = nouv_socket_descriptor;
 
-			if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {
-				perror("pthread_create");
-				exit(1);
-		    }
+			// lecture du pseudo
+			if(longueur_message_pseudo = read(nouv_socket_descriptor, params->pseudo, sizeof(params->pseudo)) <= 0) {
+				perror("erreur : pas de pseudo.");
+			}
+			else{
+				vector_add(list_client, nouv_socket_descriptor);
+
+				if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {
+					perror("erreur : impossible de créer le thread pour ce client");
+			    }
+			}
 		}
 	} 
 
