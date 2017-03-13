@@ -8,6 +8,7 @@
 #include "vector.h"
 
 #define TAILLE_MAX_NOM 256
+#define TAILLE_MAX_PSEUDO 50
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
@@ -21,6 +22,7 @@ typedef struct arg_thread {
 
 /* vector qui va contenir tous les clients */
 vector *list_client = NULL;
+char ** list_pseudo;
 
 void *connection(void *pArgs){
 	char buffer[256];
@@ -28,16 +30,16 @@ void *connection(void *pArgs){
 	int is_connected = 1;
 	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
 
+	char quitCmd[] = "/quit";
+	char wCmd[] = "/w";
+	char fileCmd[] = "/file";
+
 	printf("Connexion du client %s (num : %d)\n", args->pseudo, args->sock);
 
 	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && is_connected == 1){
 
 		//sleep(3);
-
-		char quitCmd[] = "/quit";
-		char wCmd[] = "/w";
-		char fileCmd[] = "/file";
-
+		
 		// Si le début de la ligne commence par "/" on regarde si c'est une commande
 		if(buffer[0] == '/'){
 			
@@ -73,6 +75,9 @@ void *connection(void *pArgs){
 				write(vector_get(list_client, i), buffer, strlen(buffer)+1);
 			}
 		}
+
+		// Clean du buffer
+		memset(buffer,0,longueur);
 	}
 
 	// Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté
@@ -115,9 +120,10 @@ int main(int argc, char **argv) {
 	/* thread pour chaque connexion cliente */
 	pthread_t thread;
 
-	list_client = vector_create();
+	/* pseudo du client */
+	char pseudo[64];
 
-	int longueur_message_pseudo;
+	list_client = vector_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname("localhost")) == NULL) { //localhost en dur car problème pc Sitraka
@@ -161,14 +167,15 @@ int main(int argc, char **argv) {
 			perror("erreur : impossible d'accepter la connexion avec le client.");
 		}
 		else{
-			arg_thread * params = malloc(sizeof(arg_thread));
-			params->sock = nouv_socket_descriptor;
-
 			// lecture du pseudo
-			if(longueur_message_pseudo = read(nouv_socket_descriptor, params->pseudo, sizeof(params->pseudo)) <= 0) {
+			if(read(nouv_socket_descriptor, pseudo, sizeof(pseudo)) <= 0) {
 				perror("erreur : pas de pseudo.");
 			}
 			else{
+				arg_thread * params = malloc(sizeof(arg_thread));
+				params->sock = nouv_socket_descriptor;
+				params->pseudo = pseudo;
+
 				vector_add(list_client, nouv_socket_descriptor);
 
 				if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {

@@ -61,12 +61,12 @@ void *reception(void *pArgs){
 
 	while(is_connected == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
 		buffer[longueur+1] = '\0';
-		printf("longueur du msg : %d\n", longueur );
-		printf("Reponse du serveur : \n");
-		write(1,buffer,longueur);
+		
+		printf("Reponse du serveur : ");
+		write(1,buffer,longueur); // ecriture sur la sortie standard
 		printf("\n");
-		buffer[0] = '\0';
-		cleanBuffer(&buffer); // ici 
+		
+		memset(buffer,0,longueur);
 	}
 	
 	// arrêt du programme si le client ne reçoit plus de message
@@ -77,13 +77,6 @@ void *reception(void *pArgs){
 	printf("connexion avec le serveur fermee, fin du programme.\n");
 	
 	pthread_exit(NULL);
-}
-
-// fonction marche pas
-void cleanBuffer(char* buffer){
-	for(int i = 0 ; i < sizeof(buffer); ++i){
-		buffer[i] = ' ';
-	}
 }
 
 void clean(const char *buffer, FILE *fp){
@@ -130,7 +123,7 @@ int main(int argc, char **argv) {
 	arg_thread_reception params_reception;
 	
 	if (argc != 3) {
-		perror("usage : client <adresse-serveur> <pseudo>");
+		perror("usage : client <adresse-serveur> <pseudo (sans espace)>");
 		exit(1);
 	}
 
