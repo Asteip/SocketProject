@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "vector.h"
 
 /************************************
@@ -33,7 +30,7 @@ void vector_int_add(vector_int *v, int item){
     int threshold = (int) v->max_size * 0.7;
 
     if (v->size >= threshold) 
-        vector_resize(v, v->max_size * 2);
+        vector_int_resize(v, v->max_size * 2);
     
     v->items[v->size] = item;
     v->size++;
@@ -45,14 +42,31 @@ void vector_int_set(vector_int *v, int index, int item){
 }
 
 int vector_int_get(vector_int *v, int index){
-    int ret = 0;
+    int result = 0;
 
     if (index >= 0 && index < v->size)
-        ret = v->items[index];
+        result = v->items[index];
     else
         printf("ERROR : there is no items at this index.\n");
 
-    return ret;
+    return result;
+}
+
+void vector_int_delete(vector_int *v, int index){
+    if (index < 0 || index >= v->size){
+        printf("ERROR : there is no items at this index.\n");
+        return;
+    }
+
+    for (int i = index ; i < v->size - 1 ; ++i) {
+        v->items[i] = v->items[i + 1];
+        v->items[i + 1] = 0;
+    }
+
+    v->size--;
+
+    if (v->size > 0 && v->size == v->max_size / 4)
+        vector_int_resize(v, v->max_size / 2);
 }
 
 int vector_int_search(vector_int *v, int item){
@@ -72,23 +86,6 @@ int vector_int_search(vector_int *v, int item){
     return result;
 }
 
-void vector_int_delete(vector_int *v, int index){
-    if (index < 0 || index >= v->size){
-        printf("ERROR : there is no items at this index.\n");
-        return;
-    }
-
-    for (int i = index ; i < v->size - 1 ; ++i) {
-        v->items[i] = v->items[i + 1];
-        v->items[i + 1] = 0;
-    }
-
-    v->size--;
-
-    if (v->size > 0 && v->size == v->max_size / 4)
-        vector_resize(v, v->max_size / 2);
-}
-
 void vector_int_free(vector_int *v){
     free(v->items);
 }
@@ -98,7 +95,7 @@ void vector_int_free(vector_int *v){
 *************************************/
 
 static void vector_char_resize(vector_char *v, int max_size){
-    char *items = realloc(v->items, sizeof(char) * max_size);
+    char **items = realloc(v->items, sizeof(char*) * max_size);
     if (items){
         v->items = items;
         v->max_size = max_size;
@@ -110,7 +107,7 @@ vector_char * vector_char_create(){
 
     v->max_size = VECTOR_INIT_MAX_SIZE;
     v->size = 0;
-    v->items = malloc(sizeof(char) * v->max_size);
+    v->items = malloc(sizeof(char*) * v->max_size);
 
     return v;
 }
@@ -119,33 +116,50 @@ int vector_char_size(vector_char *v){
     return v->size;
 }
 
-void vector_char_add(vector_char *v, char item){
+void vector_char_add(vector_char *v, char *item){
     int threshold = (int) v->max_size * 0.7;
 
     if (v->size >= threshold) 
-        vector_resize(v, v->max_size * 2);
+        vector_char_resize(v, v->max_size * 2);
     
     v->items[v->size] = item;
     v->size++;
 }
 
-void vector_char_set(vector_char *v, int index, char item){
+void vector_char_set(vector_char *v, int index, char *item){
     if (index >= 0 && index < v->size) 
         v->items[index] = item;
 }
 
-char vector_char_get(vector_char *v, int index){
-    char ret;
+char * vector_char_get(vector_char *v, int index){
+    char *result = NULL;
 
     if (index >= 0 && index < v->size)
-        ret = v->items[index];
+        result = v->items[index];
     else
         printf("ERROR : there is no items at this index.\n");
 
-    return ret;
+    return result;
 }
 
-int vector_char_search(vector_char *v, int item){
+void vector_char_delete(vector_char *v, int index){
+    if (index < 0 || index >= v->size){
+        printf("ERROR : there is no items at this index.\n");
+        return;
+    }
+
+    for (int i = index ; i < v->size - 1 ; ++i) {
+        v->items[i] = v->items[i + 1];
+        v->items[i + 1] = NULL;
+    }
+
+    v->size--;
+
+    if (v->size > 0 && v->size == v->max_size / 4)
+        vector_char_resize(v, v->max_size / 2);
+}
+
+int vector_char_search(vector_char *v, char *item){
     int i = 0;
     int found = 0;
     int result = -1;
@@ -162,23 +176,10 @@ int vector_char_search(vector_char *v, int item){
     return result;
 }
 
-void vector_char_delete(vector_char *v, int index){
-    if (index < 0 || index >= v->size){
-        printf("ERROR : there is no items at this index.\n");
-        return;
-    }
-
-    for (int i = index ; i < v->size - 1 ; ++i) {
-        v->items[i] = v->items[i + 1];
-        v->items[i + 1] = 0;
-    }
-
-    v->size--;
-
-    if (v->size > 0 && v->size == v->max_size / 4)
-        vector_resize(v, v->max_size / 2);
-}
-
 void vector_char_free(vector_char *v){
+    for(int i = 0 ; i < v->max_size ; ++i){
+        free(v->items[i]);
+    }
+
     free(v->items);
 }

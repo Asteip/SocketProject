@@ -1,23 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <linux/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <string.h>
-
-typedef struct sockaddr sockaddr;
-typedef struct sockaddr_in sockaddr_in;
-typedef struct hostent hostent;
-typedef struct servent servent;
-
-typedef struct arg_thread_envoi {
-	int sock;
-	char *mesg;
-} arg_thread_envoi;
-
-typedef struct arg_thread_reception {
-	int sock;
-} arg_thread_reception;
+#include "client.h"
 
 /* entier égal à 1 tant que la connexion est établie */
 int is_connected = 0;
@@ -26,27 +7,16 @@ void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
 
 	char quitCmd[] = "/quit";
-	char wCmd[] = "/w";
-	char fileCmd[] = "/file";
 
 	if(args->mesg[0] == '/'){
 		if(strstr(args->mesg, quitCmd) != NULL){
 			is_connected = 0;
 			printf("Déconnexion... \n");
 		}
-
-		if(strstr(args->mesg, wCmd) != NULL){
-			// A implémenter -> fonction message privé.
-		}
-
-		if(strstr(args->mesg, fileCmd) != NULL){
-			// A implémenter -> envoi de fichier.
-		}
 	}
 
 	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) {
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
-		// gestion erreur d'envoi
 	}
 
 	//sleep(3);
@@ -55,18 +25,18 @@ void *envoi(void *pArgs){
 }
 
 void *reception(void *pArgs){
-	char buffer[256];
+	char buffer[TAILLE_MAX_MESSAGE];
 	int longueur;
 	arg_thread_reception * args = pArgs;
 
-	while(is_connected == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
-		buffer[longueur+1] = '\0';
-		
-		printf("Reponse du serveur : ");
+	memset(buffer,0,sizeof(buffer));
+
+	while(is_connected == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {		
+		printf("\nReponse du serveur : \n");
 		write(1,buffer,longueur); // ecriture sur la sortie standard
 		printf("\n");
 		
-		memset(buffer,0,longueur);
+		memset(buffer,0,sizeof(buffer));
 	}
 	
 	// arrêt du programme si le client ne reçoit plus de message
@@ -112,11 +82,12 @@ int main(int argc, char **argv) {
 	char * pseudo;
 	
 	/* message envoyé */
-	char mesg[256] = "";
+	char mesg[TAILLE_MAX_MESSAGE] = "";
 
 	/* thread pour l'envoi de message */
 	pthread_t thread_envoi;
 	arg_thread_envoi params_envoi;
+	params_envoi.mesg = malloc(sizeof(char) * TAILLE_MAX_MESSAGE);
 
 	/* thread pour la lecture de message */
 	pthread_t thread_reception;
@@ -131,9 +102,12 @@ int main(int argc, char **argv) {
 	host = argv[1];
 	pseudo = argv[2];
 
-	if (strlen(pseudo) > 50){
-		perror("erreur : le pseudo ne doit pas dépasser les 50 caracteres");
+	if (strlen(pseudo) > TAILLE_MAX_PSEUDO - 1){
+		perror("erreur : le pseudo ne doit pas dépasser les 49 caracteres");
+		exit(1);
 	}
+
+	pseudo[strlen(pseudo) + 1] = '\0';
 
 	if ((ptr_host = gethostbyname(host)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son adresse.");
@@ -178,15 +152,16 @@ int main(int argc, char **argv) {
     }
 
 	while(is_connected == 1){
-		printf("Message: ");
+		printf("Message (inferieur a 255 caracteres) : ");
     	fgets(mesg, sizeof(mesg), stdin);
     	clean(mesg, stdin);
 
-    	params_envoi.sock = socket_descriptor;
-    	params_envoi.mesg = mesg;
+		params_envoi.sock = socket_descriptor;
+		memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
+    	strcpy(params_envoi.mesg, mesg);
 
     	if(pthread_create(&thread_envoi, NULL, envoi, (void *) &params_envoi) == -1) {
-			perror("pthread_create ; envoi");
+			perror("pthread_create : probleme lors de la creation du thread d'envoi.");
 			exit(1);
 		}
 	}	

@@ -3,6 +3,9 @@
 
 #define VECTOR_INIT_MAX_SIZE 5
 
+#include <stdio.h>
+#include <stdlib.h>
+
 /************************************
  INT VECTOR
 *************************************/
@@ -92,7 +95,7 @@ void vector_int_free(vector_int *);
  */
 
 typedef struct vector_char {
-    char ** items;
+    char **items;
     int max_size;
     int size;
 } vector_char;
