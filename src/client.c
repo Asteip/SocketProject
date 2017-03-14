@@ -20,28 +20,33 @@ typedef struct arg_thread_reception {
 } arg_thread_reception;
 
 /* entier égal à 1 tant que la connexion est établie */
-int is_connect = 0;
+int is_connected = 0;
 
 void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
 
 	char quitCmd[] = "/quit";
 	char wCmd[] = "/w";
+	char fileCmd[] = "/file";
 
 	if(args->mesg[0] == '/'){
 		if(strstr(args->mesg, quitCmd) != NULL){
-			is_connect = 0;
+			is_connected = 0;
 			printf("Déconnexion... \n");
 		}
 
 		if(strstr(args->mesg, wCmd) != NULL){
 			// A implémenter -> fonction message privé.
 		}
+
+		if(strstr(args->mesg, fileCmd) != NULL){
+			// A implémenter -> envoi de fichier.
+		}
 	}
 
 	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) {
 		perror("erreur : impossible d'ecrire le message destine au serveur.");
-		exit(1);
+		// gestion erreur d'envoi
 	}
 
 	//sleep(3);
@@ -54,31 +59,24 @@ void *reception(void *pArgs){
 	int longueur;
 	arg_thread_reception * args = pArgs;
 
-	while(is_connect == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
+	while(is_connected == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {
 		buffer[longueur+1] = '\0';
-		printf("longueur du msg : %d\n", longueur );
-		printf("Reponse du serveur : \n");
-		write(1,buffer,longueur);
+		
+		printf("Reponse du serveur : ");
+		write(1,buffer,longueur); // ecriture sur la sortie standard
 		printf("\n");
-		buffer[0] = '\0';
-		cleanBuffer(&buffer); // ici 
+		
+		memset(buffer,0,longueur);
 	}
 	
 	// arrêt du programme si le client ne reçoit plus de message
-	is_connect = 0;
+	is_connected = 0;
 	
 	printf("\nfin de la reception.\n");
 	close(args->sock);
 	printf("connexion avec le serveur fermee, fin du programme.\n");
 	
 	pthread_exit(NULL);
-}
-
-// fonction marche pas
-void cleanBuffer(char* buffer){
-	for(int i = 0 ; i < sizeof(buffer); ++i){
-		buffer[i] = ' ';
-	}
 }
 
 void clean(const char *buffer, FILE *fp){
@@ -109,6 +107,9 @@ int main(int argc, char **argv) {
 	
 	/* nom de la machine distante */
 	char * host; 
+
+	/* pseudo du client */
+	char * pseudo;
 	
 	/* message envoyé */
 	char mesg[256] = "";
@@ -121,16 +122,18 @@ int main(int argc, char **argv) {
 	pthread_t thread_reception;
 	arg_thread_reception params_reception;
 	
-	if (argc != 2) {
-		perror("usage : client <adresse-serveur>");
+	if (argc != 3) {
+		perror("usage : client <adresse-serveur> <pseudo (sans espace)>");
 		exit(1);
 	}
 
 	prog = argv[0];
 	host = argv[1];
+	pseudo = argv[2];
 
-	printf("nom de l'executable : %s \n", prog);
-	printf("adresse du serveur  : %s \n", host);
+	if (strlen(pseudo) > 50){
+		perror("erreur : le pseudo ne doit pas dépasser les 50 caracteres");
+	}
 
 	if ((ptr_host = gethostbyname(host)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son adresse.");
@@ -159,7 +162,13 @@ int main(int argc, char **argv) {
 
 	printf("connexion etablie avec le serveur. \n");
 
-	is_connect = 1;
+	//Envoi du pseudo au serveur
+	if ((write(socket_descriptor, pseudo, strlen(pseudo))) < 0) {
+		perror("erreur : impossible d'ecrire le message destine au serveur.");
+		exit(1);
+	}
+
+	is_connected = 1;
 
 	params_reception.sock = socket_descriptor;
 
@@ -168,7 +177,7 @@ int main(int argc, char **argv) {
 		exit(1);
     }
 
-	while(is_connect == 1){
+	while(is_connected == 1){
 		printf("Message: ");
     	fgets(mesg, sizeof(mesg), stdin);
     	clean(mesg, stdin);
