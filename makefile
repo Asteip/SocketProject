@@ -2,7 +2,7 @@
 
 CC=gcc
 CFLAGS=-g -O2
-LDFLAGS=-lpthread
+LDFLAGS=-lpthread -lncurses
 
 all: client server
 
