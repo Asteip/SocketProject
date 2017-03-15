@@ -6,34 +6,84 @@ int is_connected = 0;
 void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
 
-	char quitCmd[] = "/quit";
+	int cpt = 0;
 
-	if(args->mesg[0] == '/'){
-		if(strstr(args->mesg, quitCmd) != NULL){
-			is_connected = 0;
-			printf("Déconnexion... \n");
+	/* variables de pretraitements */
+	char tmp_buffer[TAILLE_MAX_MESSAGE];
+	char partie1[TAILLE_MAX_MESSAGE];
+	char partie2[TAILLE_MAX_MESSAGE];
+	char partie3[TAILLE_MAX_MESSAGE];
+
+	/* on clean les buffer avant de commencer */
+	memset(tmp_buffer,0,sizeof(args->mesg));
+	memset(partie1,0,sizeof(args->mesg));
+	memset(partie2,0,sizeof(args->mesg));
+	memset(partie3,0,sizeof(args->mesg));
+
+	/* pretraitements */
+
+	char *pch;
+
+	strcpy(tmp_buffer, args->mesg);
+	pch = strtok(tmp_buffer, " ");
+
+	while(pch != NULL){
+		
+		if(cpt == 0){
+			strcpy(partie1, pch);
+			++cpt;
 		}
+		else if(cpt == 1){
+			strcpy(partie2, pch);
+			++cpt;
+		}
+		else{
+			strcat(partie3, pch);
+			strcat(partie3, " ");
+			++cpt;
+		}
+
+		pch = strtok(NULL, " ");
 	}
 
-	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) {
-		perror("erreur : impossible d'ecrire le message destine au serveur.");
+	if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE quit (quitter le serveur)
+		is_connected = 0;
+		printf("Déconnexion... \n");
+
+		/* envoi du message */
+		if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0)
+			printf("erreur : impossible d'ecrire le message destine au serveur.\n");
+	}
+	else if(strlen(partie1) == strlen(F_CMD) && strstr(partie1, F_CMD) != NULL){ // COMMANDE file (envoi de fichier)
+		
+		// TODO A implémenter -> envoi de fichier.
+
+	}
+	else{
+		/* envoi du message */
+		if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) 
+			printf("erreur : impossible d'ecrire le message destine au serveur.\n");
 	}
 
-	//sleep(3);
+	free(pch);
 
 	pthread_exit(NULL);
 }
 
 void *reception(void *pArgs){
-	char buffer[TAILLE_MAX_MESSAGE];
-	int longueur;
 	arg_thread_reception * args = pArgs;
+
+	char buffer[TAILLE_MAX_MESSAGE];
+	int buffer_size;
 
 	memset(buffer,0,sizeof(buffer));
 
-	while(is_connected == 1 && (longueur = read(args->sock, buffer, sizeof(buffer))) > 0) {		
+	while(is_connected == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
 		printf("\nReponse du serveur : \n");
-		write(1,buffer,longueur); // ecriture sur la sortie standard
+
+		if((write(1,buffer,buffer_size)) < 0)
+			printf("erreur : impossible d'ecrire le message sur la sortie standard.\n");
+
 		printf("\n");
 		
 		memset(buffer,0,sizeof(buffer));
@@ -153,7 +203,10 @@ int main(int argc, char **argv) {
 
 	while(is_connected == 1){
 		printf("Message (inferieur a 255 caracteres) : ");
-    	fgets(mesg, sizeof(mesg), stdin);
+    	
+    	if((fgets(mesg, sizeof(mesg), stdin)) == NULL)
+    		printf("erreur : impossible de recupere le message saisie.\n");
+
     	clean(mesg, stdin);
 
 		params_envoi.sock = socket_descriptor;

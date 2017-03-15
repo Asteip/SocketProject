@@ -4,84 +4,168 @@
 vector_int *list_client = NULL;
 
 /* vector qui va contenir tous les pseudos */
-vector_char *list_pseudo;
+vector_char *list_pseudo = NULL;
 
 void *connection(void *pArgs){
-	char buffer[TAILLE_MAX_MESSGE];
+	arg_thread *args = pArgs;
+
+	char buffer[TAILLE_MAX_MESSAGE];
+	char mesg_erreur[50];
+
 	int longueur = 0;
-	int is_connected = 1;
-	int index_deco = 0;
-	arg_thread *args = pArgs; // Cast du pArgs qui est de type void*
+	int est_connecte = 1;
+	int index_client = 0;
+	int cpt = 0;
 
-	char quitCmd[] = "/quit";
-	char wCmd[] = "/w";
-	char fileCmd[] = "/file";
-	char lCmd[] = "/l";
+	/* variables de pretraitements */
+	char tmp_buffer[TAILLE_MAX_MESSAGE];
+	char partie1[TAILLE_MAX_MESSAGE];
+	char partie2[TAILLE_MAX_MESSAGE];
+	char partie3[TAILLE_MAX_MESSAGE];
 
+	/* on clean les buffer avant de commencer */
 	memset(buffer,0,sizeof(buffer));
+	memset(tmp_buffer,0,sizeof(tmp_buffer));
+	memset(partie1,0,sizeof(partie1));
+	memset(partie2,0,sizeof(partie2));
+	memset(partie3,0,sizeof(partie3));
 
-	printf("Connexion du client %s (num : %d)\n", args->pseudo, args->sock);
+	printf("Connexion du client %s (num : %d).\n", args->pseudo, args->sock);
 
-	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && is_connected == 1){
+	/* on previent les autres utilisateur de la connexion d'un nouveau client */
+	char whoConnect[80];
 
-		//sleep(3);
+	strcpy(whoConnect, "Connexion du client : ");
+	strcat(whoConnect, args->pseudo);
+
+	for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
+					
+		if((write(vector_int_get(list_client, i), whoConnect, strlen(whoConnect) + 1)) < 0)
+			printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
+			// TODO -> gestion d'erreur.
+	}
+
+	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && est_connecte == 1){
+
+		/* pretraitements */
+
+		char *pch;
+
+		cpt = 0;
+		strcpy(tmp_buffer, buffer);
+		pch = strtok(tmp_buffer, " ");
+
+		while(pch != NULL){
+			
+			if(cpt == 0){
+				strcpy(partie1, pch);
+				++cpt;
+			}
+			else if(cpt == 1){
+				strcpy(partie2, pch);
+				++cpt;
+			}
+			else{
+				strcat(partie3, pch);
+				strcat(partie3, " ");
+				++cpt;
+			}
+
+			pch = strtok(NULL, " ");
+		}
 		
-		// Si le début de la ligne commence par "/" on regarde si c'est une commande
+		// Si le début de la ligne commence par "/" on regarde si c'est une commande existante
 		if(buffer[0] == '/'){
 			
-			// COMMANDE quit (quitter le serveur)
-			if(strstr(buffer, quitCmd) != NULL){
-				char whoQuit[30];
-				char bufPos[6];
+			if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
+				char whoQuit[80];
 
 				strcpy(whoQuit, "Déconnexion du client : ");
-				sprintf(bufPos, "%d", args->sock);
-				strcat(whoQuit, bufPos);
+				strcat(whoQuit, args->pseudo);
 
 				for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
-					write(vector_int_get(list_client, i), whoQuit, strlen(whoQuit) + strlen(bufPos) + 1);
+					
+					if((write(vector_int_get(list_client, i), whoQuit, strlen(whoQuit) + 1)) < 0)
+						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
+						// TODO -> gestion d'erreur.
 				}
 
-				is_connected = 0;
+				est_connecte = 0;
 			}
+			else if(strlen(partie1) == strlen(W_CMD) && strstr(partie1, W_CMD) != NULL){ // COMMANDE w (message privé)
+				int dest = vector_char_search(list_pseudo, partie2);
 
-			// COMMANDE w (message privé)
-			if(strstr(buffer, wCmd) != NULL){
-				// A implémenter -> fonction message privé.
+				strcpy(mesg_erreur, "Le client n'existe pas.");
+
+				if(dest != -1){
+					if((write(vector_int_get(list_client, dest), partie3, strlen(partie3) + 1)) < 0)
+						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, dest));
+						// TODO -> gestion d'erreur.
+				}
+				else{
+					if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0)
+						printf("erreur : impossible d'envoyer le message au client.\n");
+						// TODO -> gestion d'erreur.
+				}
 			}
+			else if(strlen(partie1) == strlen(L_CMD) && strstr(partie1, L_CMD) != NULL){ // COMMANDE l (liste les pseudo des clients connectes)
+				char *msg_list_pseudo;
 
-			// COMMANDE file (envoi de fichier)
-			if(strstr(buffer, fileCmd) != NULL){
-				// A implémenter -> envoi de fichier.
-			}
+				msg_list_pseudo = join_strings(list_pseudo, vector_char_size(list_pseudo));
 
-			// COMMANDE list (list les pseudo des clients connectes)
-			if(strstr(buffer, lCmd) != NULL){
-				char *msg_list_pseudo = join_strings(list_pseudo, vector_char_size(list_pseudo));
-				write(args->sock, msg_list_pseudo, strlen(msg_list_pseudo) + 1);
+				// TODO Checker si le nombre de caractères du pseudo dépasse les 255 caractères.
+				
+				if((write(args->sock, msg_list_pseudo, strlen(msg_list_pseudo) + 1)) < 0)
+					printf("erreur : impossible d'envoyer le message au client.\n");
+					// TODO -> gestion d'erreur.
+
 				free(msg_list_pseudo);
+			}
+			else if(strlen(partie1) == strlen(F_CMD) && strstr(partie1, F_CMD) != NULL){ // COMMANDE f (envoi de fichier)
+				
+				// TODO A implémenter -> envoi de fichier.
+
+			}
+			else{
+				strcpy(mesg_erreur, "Cette commande n'existe pas.");
+
+				if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0)
+					printf("erreur : impossible d'envoyer le message au client.\n");
+					// TODO -> gestion d'erreur.
 			}
 		}
 		else{
 			/* envoi du message a tous les autres utilisateurs */
 			for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
-				write(vector_int_get(list_client, i), buffer, strlen(buffer)+1);
+				
+				if((write(vector_int_get(list_client, i), buffer, strlen(buffer) + 1)) < 0)
+					printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
+					// TODO -> gestion d'erreur.
 			}
 		}
 
-		// Clean du buffer
+		// Clean des buffer
 		memset(buffer,0,sizeof(buffer));
+		memset(tmp_buffer,0,sizeof(tmp_buffer));
+		memset(partie1,0,sizeof(partie1));
+		memset(partie2,0,sizeof(partie2));
+		memset(partie3,0,sizeof(partie3));
+
+		free(pch);
 	}
 
-	// Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté
-	printf("Déconnexion du client %d\n", args->sock);
+	/* Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté */
+	printf("Déconnexion du client %s (num : %d).\n", args->pseudo, args->sock);
 
 	close(args->sock);
-	index_deco = vector_int_search(list_client, args->sock);
-	vector_int_delete(list_client, index_deco);
-	vector_char_delete(list_pseudo, index_deco);
+
+	index_client = vector_int_search(list_client, args->sock); // on calcul l'emplacement du client.
+	vector_int_delete(list_client, index_client);
+	vector_char_delete(list_pseudo, index_client);
+
 	free(args->pseudo);
 	free(args);
+
 	pthread_exit(NULL);
 }
 
@@ -93,6 +177,7 @@ char* join_strings(vector_char *strings, int count){
 
 	for(i = 0 ; i < count ; i++){
 		total_length += strlen(vector_char_get(strings, i));
+		
 		if(vector_char_get(strings, i)[strlen(vector_char_get(strings, i))-1] != '\n')
 			++total_length; 
 	}
@@ -155,7 +240,7 @@ int main(int argc, char **argv) {
 	list_pseudo = vector_char_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
-	if ((ptr_hote = gethostbyname("localhost")) == NULL) { //localhost en dur car problème pc Sitraka
+	if ((ptr_hote = gethostbyname("localhost")) == NULL) { // Temporaire -> problème avec le pc de Sitraka
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
 		exit(1);
 	}
@@ -195,10 +280,8 @@ int main(int argc, char **argv) {
 		memset(pseudo,0,sizeof(pseudo));
 
 		/* adresse_client_courant sera renseignée par accept via les infos du connect */
-		if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante)) < 0) {
-			perror("erreur : impossible d'accepter la connexion avec le client.");
-		}
-		else{
+		if ((nouv_socket_descriptor = accept(socket_descriptor, (sockaddr*)(&adresse_client_courant), &longueur_adresse_courante)) >= 0) {
+			
 			// lecture du pseudo
 			if((longueur_pseudo = read(nouv_socket_descriptor, pseudo, sizeof(pseudo))) > 0) {
 				arg_thread * params = malloc(sizeof(arg_thread));
@@ -209,13 +292,20 @@ int main(int argc, char **argv) {
 				vector_int_add(list_client, params->sock);
 				vector_char_add(list_pseudo, params->pseudo);
 
+				// TODO -> verifier si le pseudo n'est pas déjà dans la liste.
+
 				if(pthread_create(&thread, NULL, connection, (void *) params) == -1) {
-					perror("erreur : impossible de créer le thread pour ce client");
+					printf("erreur : impossible de créer le thread pour le client : %d.\n", nouv_socket_descriptor);
+					// TODO -> gestion d'erreur.
 			    }
 			}
 			else{
-				perror("erreur : pas de pseudo.");
+				printf("erreur : pas de pseudo renseigné.\n");
+				// TODO -> gestion d'erreur.
 			}
+		}
+		else{
+			printf("erreur : impossible d'accepter la connexion avec le client : %d.\n", socket_descriptor);
 		}
 	} 
 

@@ -13,6 +13,9 @@
 #include <pthread.h>
 #include <string.h>
 
+static const char Q_CMD[] = "/q"; // Commande "quitter"
+static const char F_CMD[] = "/f"; // Commande "envoi de fichier"
+
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
