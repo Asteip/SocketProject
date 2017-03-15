@@ -137,14 +137,14 @@ char * vector_char_get(vector_char *v, int index){
     if (index >= 0 && index < v->size)
         result = v->items[index];
     else
-        printf("ERROR : there is no items at this index.\n");
+        perror("ERROR : there is no items at this index.\n");
 
     return result;
 }
 
 void vector_char_delete(vector_char *v, int index){
     if (index < 0 || index >= v->size){
-        printf("ERROR : there is no items at this index.\n");
+        perror("ERROR : there is no items at this index.\n");
         return;
     }
 
@@ -165,7 +165,7 @@ int vector_char_search(vector_char *v, char *item){
     int result = -1;
 
     while(i < v->size && found == 0){
-        if(v->items[i] == item){
+        if((strlen(v->items[i]) == strlen(item)) && (strstr(v->items[i], item) != NULL)){
             found = 1;
             result = i;
         }
