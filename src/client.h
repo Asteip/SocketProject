@@ -7,14 +7,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <ncurses.h>
 #include <linux/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <string.h>
+#include "vector.h"
 
+const int N = 9;//taille de la conversation 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
 static const char F_CMD[] = "/f"; // Commande "envoi de fichier"
+
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
@@ -34,6 +38,10 @@ void *envoi(void *);
 
 void *reception(void *);
 
-void clean(const char *, FILE *);
+
+
+//fonctions pour l'ihm
+void init_msgs(vector_char *);
+void insert_msg(vector_char * ,char*);
 
 #endif

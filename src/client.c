@@ -1,7 +1,11 @@
 #include "client.h"
 
+
 /* entier égal à 1 tant que la connexion est établie */
 int is_connected = 0;
+
+vector_char *msgs = NULL;
+
 
 void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
@@ -48,7 +52,7 @@ void *envoi(void *pArgs){
 
 	if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE quit (quitter le serveur)
 		is_connected = 0;
-		printf("Déconnexion... \n");
+
 
 		/* envoi du message */
 		if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0)
@@ -79,35 +83,43 @@ void *reception(void *pArgs){
 	memset(buffer,0,sizeof(buffer));
 
 	while(is_connected == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
-		printf("\nReponse du serveur : \n");
-
-		if((write(1,buffer,buffer_size)) < 0)
-			printf("erreur : impossible d'ecrire le message sur la sortie standard.\n");
-
-		printf("\n");
-		
+	
+		insert_msg(msgs, buffer);
 		memset(buffer,0,sizeof(buffer));
 	}
 	
 	// arrêt du programme si le client ne reçoit plus de message
 	is_connected = 0;
 	
-	printf("\nfin de la reception.\n");
+	//printf("\nfin de la reception.\n");
 	close(args->sock);
-	printf("connexion avec le serveur fermee, fin du programme.\n");
+	//printf("connexion avec le serveur fermee, fin du programme.\n");
 	
 	pthread_exit(NULL);
 }
 
-void clean(const char *buffer, FILE *fp){
-    char *p = strchr(buffer,'\n');
-    if (p != NULL)
-        *p = 0;
-    else{
-        int c;
-        while ((c = fgetc(fp)) != '\n' && c != EOF);
-    }
+
+
+ //Fonctions pour l'IHM
+
+void init_msgs(vector_char *msgs){
+	for(int i=0; i<N; ++i){
+		vector_char_add(msgs,"");
+	}
 }
+
+
+
+
+void insert_msg(vector_char *msgs ,char* msg){
+	for(int i=vector_char_size(msgs) -1 ; i>0; --i){
+		vector_char_set(msgs,i,vector_char_get(msgs,i-1));
+	}
+	vector_char_set(msgs,0,msg);
+}
+
+
+
 
 int main(int argc, char **argv) {
 	/* descripteur de socket */
@@ -170,7 +182,7 @@ int main(int argc, char **argv) {
 
 	adresse_locale.sin_port = htons(5000);
 
-	printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
+
 
 	/* creation de la socket */
 	if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -184,7 +196,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	printf("connexion etablie avec le serveur. \n");
+
 
 	//Envoi du pseudo au serveur
 	if ((write(socket_descriptor, pseudo, strlen(pseudo))) < 0) {
@@ -200,24 +212,63 @@ int main(int argc, char **argv) {
 		perror("pthread_create : reception");
 		exit(1);
     }
+    
+    //IHM
+    WINDOW *haut, *bas;
+	
+    
+    //Initialisation de la conversation
+	msgs = vector_char_create() ;
+	init_msgs(msgs);
+
+	
+
+	char *str = malloc (256 * sizeof (char));
+
+	
+	int tour =0;
+	initscr();
+
 
 	while(is_connected == 1){
-		printf("Message (inferieur a 255 caracteres) : ");
-    	
-    	if((fgets(mesg, sizeof(mesg), stdin)) == NULL)
-    		printf("erreur : impossible de recupere le message saisie.\n");
+    	clear();   
+        attron(A_STANDOUT);
+    	mvprintw(0, (COLS / 2) - (strlen(pseudo) / 2), pseudo);
+		attroff(A_STANDOUT);
+		haut= subwin(stdscr, 2*LINES /3  -1, COLS, 1, 0);       
+    	bas= subwin(stdscr, LINES / 3, COLS, 2*LINES / 3, 0); 
+	    box(haut, ACS_VLINE, ACS_HLINE);
+	    box(bas, ACS_VLINE, ACS_HLINE);
+	    
+	    mvwprintw(haut, 1, 1, "Messages :");
+	    for(int i=0; i<N ; ++i){
+	    	mvwprintw(haut, (2*LINES)/3 -3 -i,COLS - strlen(vector_char_get(msgs,i)) - 2,vector_char_get(msgs,i));
+ 		
+	  	}
+		
+	    
+	    mvwprintw(bas, 1, 1, "Répondre :");
+		move(2*LINES/3 + 2, 1);
+	 
+	    wrefresh(haut);
+		wrefresh(bas); 
 
-    	clean(mesg, stdin);
-
+		char *str = malloc (256 * sizeof (char));
+		strcpy(str, "\0");
+		getstr(str);
+	
 		params_envoi.sock = socket_descriptor;
 		memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
-    	strcpy(params_envoi.mesg, mesg);
+    	strcpy(params_envoi.mesg, str);
 
     	if(pthread_create(&thread_envoi, NULL, envoi, (void *) &params_envoi) == -1) {
 			perror("pthread_create : probleme lors de la creation du thread d'envoi.");
 			exit(1);
 		}
-	}	
+	}
+	endwin();              
+	//free(haut);
+	//free(bas);	
 
 	exit(0);
 }
