@@ -32,6 +32,10 @@ typedef struct arg_thread {
 
 void *connection(void *);
 
-char* join_strings(vector_char *strings, int count);
+void *renvoi_message(void *);
+
+void *insert_message_erreur(char *, int , int);
+
+char *join_strings(vector_char *, int);
 
 #endif
