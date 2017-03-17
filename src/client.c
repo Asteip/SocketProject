@@ -5,7 +5,8 @@
 int is_connected = 0;
 
 vector_char *msgs = NULL;
-
+WINDOW *haut = NULL;
+WINDOW *bas = NULL;
 
 void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
@@ -77,15 +78,21 @@ void *envoi(void *pArgs){
 void *reception(void *pArgs){
 	arg_thread_reception * args = pArgs;
 
-	char buffer[TAILLE_MAX_MESSAGE];
+	char *buffer =  malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+	//strcpy(buffer, "\0");
 	int buffer_size;
 
-	memset(buffer,0,sizeof(buffer));
+
 
 	while(is_connected == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
-	
-		insert_msg(msgs, buffer);
-		memset(buffer,0,sizeof(buffer));
+		char* str = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+		strcpy(str,buffer);
+		
+		insert_msg(msgs, str);
+
+		refreshMsg(haut);
+		char *buffer = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+		strcpy(buffer, "\0");
 	}
 	
 	// arrêt du programme si le client ne reçoit plus de message
@@ -118,7 +125,16 @@ void insert_msg(vector_char *msgs ,char* msg){
 	vector_char_set(msgs,0,msg);
 }
 
-
+void refreshMsg(WINDOW* haut){
+	 
+	 //wclean(haut);
+	 box(haut, ACS_VLINE, ACS_HLINE);
+	 mvwprintw(haut, 1, 1, "Messages :");
+	 for(int i=0; i<N ; ++i){
+	 	mvwprintw(haut, (2*LINES)/3 -3 -i,2,vector_char_get(msgs,i));
+ 		
+	 }
+}
 
 
 int main(int argc, char **argv) {
@@ -213,8 +229,8 @@ int main(int argc, char **argv) {
 		exit(1);
     }
     
-    //IHM
-    WINDOW *haut, *bas;
+ 
+    
 	
     
     //Initialisation de la conversation
@@ -237,14 +253,15 @@ int main(int argc, char **argv) {
 		attroff(A_STANDOUT);
 		haut= subwin(stdscr, 2*LINES /3  -1, COLS, 1, 0);       
     	bas= subwin(stdscr, LINES / 3, COLS, 2*LINES / 3, 0); 
-	    box(haut, ACS_VLINE, ACS_HLINE);
+	    //box(haut, ACS_VLINE, ACS_HLINE);
 	    box(bas, ACS_VLINE, ACS_HLINE);
 	    
-	    mvwprintw(haut, 1, 1, "Messages :");
+	    /*mvwprintw(haut, 1, 1, "Messages :");
 	    for(int i=0; i<N ; ++i){
 	    	mvwprintw(haut, (2*LINES)/3 -3 -i,COLS - strlen(vector_char_get(msgs,i)) - 2,vector_char_get(msgs,i));
  		
-	  	}
+	  	}*/
+	  	refreshMsg(haut);
 		
 	    
 	    mvwprintw(bas, 1, 1, "Répondre :");
@@ -256,6 +273,7 @@ int main(int argc, char **argv) {
 		char *str = malloc (256 * sizeof (char));
 		strcpy(str, "\0");
 		getstr(str);
+		insert_msg(msgs,str);
 	
 		params_envoi.sock = socket_descriptor;
 		memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
@@ -267,8 +285,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	endwin();              
-	//free(haut);
-	//free(bas);	
+
 
 	exit(0);
 }

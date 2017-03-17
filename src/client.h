@@ -15,7 +15,7 @@
 #include <string.h>
 #include "vector.h"
 
-const int N = 9;//taille de la conversation 
+const int N = 8;//taille de la conversation 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
 static const char F_CMD[] = "/f"; // Commande "envoi de fichier"
 
@@ -38,7 +38,7 @@ void *envoi(void *);
 
 void *reception(void *);
 
-
+void refreshMsg(WINDOW* );
 
 //fonctions pour l'ihm
 void init_msgs(vector_char *);
