@@ -1,7 +1,7 @@
 .PHONY: clean
 
 CC=gcc
-CFLAGS=-g -O2
+CFLAGS=-g -O2 -std=c99
 LDFLAGS=-lpthread -lncurses
 
 all: client server

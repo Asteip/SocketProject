@@ -7,21 +7,21 @@ vector_int *list_client = NULL;
 vector_char *list_pseudo = NULL;
 
 /* vector qui va contenir les messages non transmis suite à une erreur */
-vector_char *list_message = NULL;
+vector_char *list_unsend_msg = NULL;
 
 /* vector qui va contenir les clients destinataires des messages non transmis */
-vector_int *list_message_sock = NULL;
+vector_int *list_unsend_sock = NULL;
 
 /* vector qui va contenir les compteurs permettant de gérer les timeout des messages non transmis */
-vector_int *list_message_cpt = NULL;
+vector_int *list_unsend_cpt = NULL;
 
 void *connection(void *pArgs){
 	arg_thread *args = pArgs;
 
 	char buffer[TAILLE_MAX_MESSAGE];
-	char mesg_erreur[50];
+	char mesg_erreur[TAILLE_MAX_MESSAGE];
 
-	int longueur = 0;
+	int long_buffer = 0;
 	int est_connecte = 1;
 	int index_client = 0;
 	int cpt = 0;
@@ -41,23 +41,25 @@ void *connection(void *pArgs){
 
 	printf("Connexion du client %s (num : %d).\n", args->pseudo, args->sock);
 
-	/* on previent les autres utilisateur de la connexion d'un nouveau client */
-	char whoConnect[80];
+	/* on previent les autres utilisateurs de la connexion d'un nouveau client */
+	char whoConnect[TAILLE_MAX_MESSAGE];
 
-	strcpy(whoConnect, "Connexion du client : ");
+	strcpy(whoConnect, "* ");
 	strcat(whoConnect, args->pseudo);
+	strcat(whoConnect, " s'est connecté. *");
 
 	for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
 					
 		if((write(vector_int_get(list_client, i), whoConnect, strlen(whoConnect) + 1)) < 0){
 			printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
-			insert_message_erreur(whoConnect, vector_int_get(list_client, i), 3);
+			insert_message_unsend(whoConnect, vector_int_get(list_client, i), 3);
 		}
 	}
 
-	while((longueur = read(args->sock, buffer, sizeof(buffer))) > 0 && est_connecte == 1){
+	/* tant que l'utilisateur est connecté, on lit les messages reçus */
+	while((long_buffer = read(args->sock, buffer, sizeof(buffer))) > 0 && est_connecte == 1){
 
-		/* pretraitements */
+		/* prétraitements du message reçu : on sépare la partie commande et options de la partie message */
 
 		char *pch;
 
@@ -88,16 +90,17 @@ void *connection(void *pArgs){
 		if(buffer[0] == '/'){
 			
 			if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
-				char whoQuit[80];
+				char whoQuit[TAILLE_MAX_MESSAGE];
 
-				strcpy(whoQuit, "Déconnexion du client : ");
+				strcpy(whoQuit, "* ");
 				strcat(whoQuit, args->pseudo);
+				strcat(whoQuit, " s'est déconnecté. *");
 
 				for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
 					
 					if((write(vector_int_get(list_client, i), whoQuit, strlen(whoQuit) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
-						insert_message_erreur(whoQuit, vector_int_get(list_client, i), 3);
+						insert_message_unsend(whoQuit, vector_int_get(list_client, i), 3);
 					}
 				}
 
@@ -105,16 +108,22 @@ void *connection(void *pArgs){
 			}
 			else if(strlen(partie1) == strlen(W_CMD) && strstr(partie1, W_CMD) != NULL){ // COMMANDE w (message privé)
 				int dest = vector_char_search(list_pseudo, partie2);
+				char whoSend[TAILLE_MAX_MESSAGE];
 
 				if(dest != -1){
-					if((write(vector_int_get(list_client, dest), partie3, strlen(partie3) + 1)) < 0){
+					strcpy(whoSend, "(");
+					strcat(whoSend, args->pseudo);
+					strcat(whoSend, ") ");
+					strcat(whoSend, partie3);
+
+					if((write(vector_int_get(list_client, dest), whoSend, strlen(whoSend) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, dest));
 						
 						strcpy(mesg_erreur, "Impossible de joindre le client en message prive.");
 
 						if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 							printf("erreur : impossible d'envoyer le message au client.\n");
-							insert_message_erreur(mesg_erreur, args->sock, 3);
+							insert_message_unsend(mesg_erreur, args->sock, 3);
 						}
 					}
 				}
@@ -123,11 +132,11 @@ void *connection(void *pArgs){
 
 					if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client.\n");
-						insert_message_erreur(mesg_erreur, args->sock, 3);
+						insert_message_unsend(mesg_erreur, args->sock, 3);
 					}
 				}
 			}
-			else if(strlen(partie1) == strlen(L_CMD) && strstr(partie1, L_CMD) != NULL){ // COMMANDE l (liste les pseudo des clients connectes)
+			else if(strlen(partie1) == strlen(L_CMD) && strstr(partie1, L_CMD) != NULL){ // COMMANDE l (liste les pseudos des clients connectes)
 				char *msg_list_pseudo;
 
 				msg_list_pseudo = join_strings(list_pseudo, vector_char_size(list_pseudo));
@@ -136,22 +145,62 @@ void *connection(void *pArgs){
 				
 				if((write(args->sock, msg_list_pseudo, strlen(msg_list_pseudo) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
-					insert_message_erreur(msg_list_pseudo, args->sock, 3);
+					insert_message_unsend(msg_list_pseudo, args->sock, 3);
 				}
 
 				free(msg_list_pseudo);
 			}
-			else if(strlen(partie1) == strlen(F_CMD) && strstr(partie1, F_CMD) != NULL){ // COMMANDE f (envoi de fichier)
+			else if(strlen(partie1) == strlen(N_CMD) && strstr(partie1, N_CMD) != NULL){ // COMMANDE n (changement de pseudo)
+				char whoChange[TAILLE_MAX_MESSAGE];
+
+				if(vector_char_search(list_pseudo,partie2) == -1 && strlen(partie2) < TAILLE_MAX_PSEUDO){
+					strcpy(whoChange, "* ");
+					strcat(whoChange, args->pseudo);
+					strcat(whoChange, " s'est renommé en ");
+					strcat(whoChange, partie2);
+					strcat(whoChange, " *");
+
+					strcpy(args->pseudo, partie2);
+
+					for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
+					
+						if((write(vector_int_get(list_client, i), whoChange, strlen(whoChange) + 1)) < 0){
+							printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
+							insert_message_unsend(whoChange, vector_int_get(list_client, i), 3);
+						}
+					}
+				}
+				else{
+					strcpy(mesg_erreur, "Le pseudo existe déjà ou dépasse les 49 caractères autorisés.");
+
+					if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
+						printf("erreur : impossible d'envoyer le message au client.\n");
+						insert_message_unsend(mesg_erreur, args->sock, 3);
+					}
+				}
+			}
+			else if(strlen(partie1) == strlen(H_CMD) && strstr(partie1, H_CMD) != NULL){ // COMMANDE h (help)
 				
-				// TODO A implémenter -> envoi de fichier.
+				char helpMsg[TAILLE_MAX_MESSAGE];
+				strcpy(helpMsg, "Commandes disponibles : \n");
+				strcat(helpMsg, "  /q : quitter");
+				strcat(helpMsg, "  /w <pseudo> : message privé");
+				strcat(helpMsg, "  /l : liste utilisateurs");
+				strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo");
+				strcat(helpMsg, "  /h : help");
+
+				if((write(args->sock, helpMsg, strlen(helpMsg) + 1)) < 0){
+					printf("erreur : impossible d'envoyer le message au client.\n");
+					insert_message_unsend(helpMsg, args->sock, 3);
+				}
 
 			}
 			else{
-				strcpy(mesg_erreur, "Cette commande n'existe pas.");
+				strcpy(mesg_erreur, "Cette commande n'existe pas. Taper /h pour obtenir la liste des commandes disponibles.");
 
 				if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
-					insert_message_erreur(mesg_erreur, args->sock, 3);
+					insert_message_unsend(mesg_erreur, args->sock, 3);
 				}
 			}
 		}
@@ -161,7 +210,7 @@ void *connection(void *pArgs){
 				
 				if((write(vector_int_get(list_client, i), buffer, strlen(buffer) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
-					insert_message_erreur(buffer, vector_int_get(list_client, i), 3);
+					insert_message_unsend(buffer, vector_int_get(list_client, i), 3);
 				}
 			}
 		}
@@ -191,41 +240,41 @@ void *connection(void *pArgs){
 	pthread_exit(NULL);
 }
 
-void *renvoi_message(void *args){
+void *renvoi_message_unsend(void *args){
 	for(;;){
-		for(int i = 0 ; i < vector_char_size(list_message) ; ++i){
-			char *msg = vector_char_get(list_message, i);
-			int msg_sock = vector_int_get(list_message_sock, i);
-			int msg_cpt = vector_int_get(list_message_cpt, i);
+		for(int i = 0 ; i < vector_char_size(list_unsend_msg) ; ++i){
+			char *msg = vector_char_get(list_unsend_msg, i);
+			int msg_sock = vector_int_get(list_unsend_sock, i);
+			int msg_cpt = vector_int_get(list_unsend_cpt, i);
 
 			if((write(msg_sock, msg, strlen(msg) + 1)) < 0){
-				vector_int_set(list_message_cpt, i, msg_cpt - 1);
+				vector_int_set(list_unsend_cpt, i, msg_cpt - 1);
 
-				if(vector_int_get(list_message_cpt, i) == 0){
-					vector_char_delete(list_message, i);
-					vector_int_delete(list_message_sock, i);
-					vector_int_delete(list_message_cpt, i);
+				if(vector_int_get(list_unsend_cpt, i) == 0){
+					vector_char_delete(list_unsend_msg, i);
+					vector_int_delete(list_unsend_sock, i);
+					vector_int_delete(list_unsend_cpt, i);
 					free(msg);
 				}
 			}
 			else{
-				vector_char_delete(list_message, i);
-				vector_int_delete(list_message_sock, i);
-				vector_int_delete(list_message_cpt, i);
+				vector_char_delete(list_unsend_msg, i);
+				vector_int_delete(list_unsend_sock, i);
+				vector_int_delete(list_unsend_cpt, i);
 				free(msg);
 			}
 		}
 	}
 }
 
-void *insert_message_erreur(char *message, int socket, int cpt){
+void *insert_message_unsend(char *message, int socket, int cpt){
 	char *cpy_message;
 
 	strcpy(cpy_message, message);
 
-	vector_char_add(list_message, cpy_message);
-	vector_int_add(list_message_sock, socket);
-	vector_int_add(list_message_cpt, cpt);
+	vector_char_add(list_unsend_msg, cpy_message);
+	vector_int_add(list_unsend_sock, socket);
+	vector_int_add(list_unsend_cpt, cpt);
 }
 
 char* join_strings(vector_char *strings, int count){
@@ -298,9 +347,9 @@ int main(int argc, char **argv) {
 	/* création des vectors */
 	list_client = vector_int_create();
 	list_pseudo = vector_char_create();
-	list_message = vector_char_create();
-	list_message_sock = vector_int_create();
-	list_message_cpt = vector_int_create();
+	list_unsend_msg = vector_char_create();
+	list_unsend_sock = vector_int_create();
+	list_unsend_cpt = vector_int_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
 	if ((ptr_hote = gethostbyname("localhost")) == NULL) { // Temporaire -> problème avec le pc de Sitraka
@@ -336,7 +385,7 @@ int main(int argc, char **argv) {
 	listen(socket_descriptor,5);
 
 	/* lancement du thread de renvoi de message en cas d'erreur */
-	if(pthread_create(&thread, NULL, renvoi_message, NULL) == -1) {
+	if(pthread_create(&thread, NULL, renvoi_message_unsend, NULL) == -1) {
 		perror("erreur : impossible de créer le thread de gestion de message non-envoye.");
 		exit(1);
     }
