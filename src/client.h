@@ -3,6 +3,8 @@
 
 #define TAILLE_MAX_PSEUDO 50
 #define TAILLE_MAX_MESSAGE 256
+#define TAILLE_CONERSATION 8 // taille de la conversation
+#define h_addr h_addr_list[0] // Résolution bug sur pc de la fac
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,10 +17,8 @@
 #include <string.h>
 #include "vector.h"
 
-const int N = 8;//taille de la conversation 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
-static const char F_CMD[] = "/f"; // Commande "envoi de fichier"
-
+static const char N_CMD[] = "/n"; // Commande "changer de nom"
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
@@ -34,14 +34,16 @@ typedef struct arg_thread_reception {
 	int sock;
 } arg_thread_reception;
 
+// FONCTIONS THREAD
+
 void *envoi(void *);
 
 void *reception(void *);
 
-void refreshMsg(WINDOW* );
+// FONCTIONS IHM
 
-//fonctions pour l'ihm
-void init_msgs(vector_char *);
-void insert_msg(vector_char * ,char*);
+void refresh_haut();
+
+void refresh_bas();
 
 #endif

@@ -4,7 +4,7 @@
 #define TAILLE_MAX_NOM 256 // Taille max du nom de la machine
 #define TAILLE_MAX_MESSAGE 256 // Taille max d'un message
 #define TAILLE_MAX_PSEUDO 50 // Taille max d'un pseudo
-#define h_addr h_addr_list[0]
+#define h_addr h_addr_list[0] // Résolution bug sur pc de la fac
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,11 +32,15 @@ typedef struct arg_thread {
 	char* pseudo;
 } arg_thread;
 
+// FONCTIONS THREAD
+
 void *connection(void *);
 
 void *renvoi_message_unsend(void *);
 
-void *insert_message_unsend(char *, int , int);
+// AUTRES FONCTIONS
+
+void insert_message_unsend(char *, int , int);
 
 char *join_strings(vector_char *, int);
 

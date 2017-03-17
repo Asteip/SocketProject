@@ -89,7 +89,7 @@ void *connection(void *pArgs){
 		/* Si le début de la ligne commence par "/" on regarde si c'est une commande existante */
 		if(buffer[0] == '/'){
 			
-			if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
+			if(strlen(partie1) == strlen(Q_CMD) && strcmp(partie1, Q_CMD) == 0){ // COMMANDE q (quitter le serveur)
 				char whoQuit[TAILLE_MAX_MESSAGE];
 
 				strcpy(whoQuit, "* ");
@@ -106,7 +106,7 @@ void *connection(void *pArgs){
 
 				est_connecte = 0;
 			}
-			else if(strlen(partie1) == strlen(W_CMD) && strstr(partie1, W_CMD) != NULL){ // COMMANDE w (message privé)
+			else if(strlen(partie1) == strlen(W_CMD) && strcmp(partie1, W_CMD) == 0){ // COMMANDE w (message privé)
 				int dest = vector_char_search(list_pseudo, partie2);
 				char whoSend[TAILLE_MAX_MESSAGE];
 
@@ -136,7 +136,7 @@ void *connection(void *pArgs){
 					}
 				}
 			}
-			else if(strlen(partie1) == strlen(L_CMD) && strstr(partie1, L_CMD) != NULL){ // COMMANDE l (liste les pseudos des clients connectes)
+			else if(strlen(partie1) == strlen(L_CMD) && strcmp(partie1, L_CMD) == 0){ // COMMANDE l (liste les pseudos des clients connectes)
 				char *msg_list_pseudo;
 
 				msg_list_pseudo = join_strings(list_pseudo, vector_char_size(list_pseudo));
@@ -150,7 +150,7 @@ void *connection(void *pArgs){
 
 				free(msg_list_pseudo);
 			}
-			else if(strlen(partie1) == strlen(N_CMD) && strstr(partie1, N_CMD) != NULL){ // COMMANDE n (changement de pseudo)
+			else if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
 				char whoChange[TAILLE_MAX_MESSAGE];
 
 				if(vector_char_search(list_pseudo,partie2) == -1 && strlen(partie2) < TAILLE_MAX_PSEUDO){
@@ -179,15 +179,15 @@ void *connection(void *pArgs){
 					}
 				}
 			}
-			else if(strlen(partie1) == strlen(H_CMD) && strstr(partie1, H_CMD) != NULL){ // COMMANDE h (help)
+			else if(strlen(partie1) == strlen(H_CMD) && strcmp(partie1, H_CMD) == 0){ // COMMANDE h (help)
 				
 				char helpMsg[TAILLE_MAX_MESSAGE];
 				strcpy(helpMsg, "Commandes disponibles : \n");
-				strcat(helpMsg, "  /q : quitter");
-				strcat(helpMsg, "  /w <pseudo> : message privé");
-				strcat(helpMsg, "  /l : liste utilisateurs");
-				strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo");
-				strcat(helpMsg, "  /h : help");
+				strcat(helpMsg, "  /q : quitter\n");
+				strcat(helpMsg, "  /w <pseudo> : message privé\n");
+				strcat(helpMsg, "  /l : liste utilisateurs\n");
+				strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo\n");
+				strcat(helpMsg, "  /h : help\n");
 
 				if((write(args->sock, helpMsg, strlen(helpMsg) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
@@ -196,7 +196,7 @@ void *connection(void *pArgs){
 
 			}
 			else{
-				strcpy(mesg_erreur, "Cette commande n'existe pas. Taper /h pour obtenir la liste des commandes disponibles.");
+				strcpy(mesg_erreur, "Cette commande n'existe pas. Tapez /h pour obtenir la liste des commandes disponibles.");
 
 				if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
@@ -215,13 +215,14 @@ void *connection(void *pArgs){
 			}
 		}
 
-		// Clean des buffer
+		/* Clean des buffer */
 		memset(buffer,0,sizeof(buffer));
 		memset(tmp_buffer,0,sizeof(tmp_buffer));
 		memset(partie1,0,sizeof(partie1));
 		memset(partie2,0,sizeof(partie2));
 		memset(partie3,0,sizeof(partie3));
 
+		/* on libère la mémoire */
 		free(pch);
 	}
 
@@ -230,7 +231,7 @@ void *connection(void *pArgs){
 
 	close(args->sock);
 
-	index_client = vector_int_search(list_client, args->sock); // on calcul l'emplacement du client.
+	index_client = vector_int_search(list_client, args->sock); // on calcul l'emplacement du client pour le supprimer.
 	vector_int_delete(list_client, index_client);
 	vector_char_delete(list_pseudo, index_client);
 
@@ -241,6 +242,8 @@ void *connection(void *pArgs){
 }
 
 void *renvoi_message_unsend(void *args){
+
+	/* tentative de renvoi des messages non envoyés */
 	for(;;){
 		for(int i = 0 ; i < vector_char_size(list_unsend_msg) ; ++i){
 			char *msg = vector_char_get(list_unsend_msg, i);
@@ -267,7 +270,7 @@ void *renvoi_message_unsend(void *args){
 	}
 }
 
-void *insert_message_unsend(char *message, int socket, int cpt){
+void insert_message_unsend(char *message, int socket, int cpt){
 	char *cpy_message;
 
 	strcpy(cpy_message, message);
@@ -326,10 +329,10 @@ int main(int argc, char **argv) {
 	sockaddr_in adresse_client_courant; 
 
 	/* les infos recuperees sur la machine hote */
-	hostent* ptr_hote; 
+	hostent *ptr_hote; 
 
 	/* les infos recuperees sur le service de la machine */
-	servent* ptr_service; 
+	servent *ptr_service; 
 
 	/* nom de la machine locale */
 	char machine[TAILLE_MAX_NOM+1]; 
@@ -352,7 +355,7 @@ int main(int argc, char **argv) {
 	list_unsend_cpt = vector_int_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
-	if ((ptr_hote = gethostbyname("localhost")) == NULL) { // Temporaire -> problème avec le pc de Sitraka
+	if ((ptr_hote = gethostbyname("localhost")) == NULL) { // TODO changer en "machine". Temporaire -> problème avec le pc de Sitraka
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
 		exit(1);
 	}
