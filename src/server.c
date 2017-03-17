@@ -372,8 +372,9 @@ int main(int argc, char **argv) {
 
 					if((write(nouv_socket_descriptor, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client : %d.\n", nouv_socket_descriptor);
-						insert_message_erreur(mesg_erreur, nouv_socket_descriptor, 3);
 					}
+
+					close(nouv_socket_descriptor);
 				}
 			}
 			else{
@@ -383,8 +384,9 @@ int main(int argc, char **argv) {
 
 				if((write(nouv_socket_descriptor, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client : %d.\n", nouv_socket_descriptor);
-					insert_message_erreur(mesg_erreur, nouv_socket_descriptor, 3);
 				}
+
+				close(nouv_socket_descriptor);
 			}
 		}
 		else{
