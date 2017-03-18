@@ -1,10 +1,11 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#define TAILLE_MAX_MESSAGE 256 // Taille max d'un message : 226 (message) + 20 (pseudo) + 10(marge)
+#define TAILLE_MSG_SAISIE 226
 #define TAILLE_MAX_PSEUDO 50
-#define TAILLE_MAX_MESSAGE 256
 #define TAILLE_CONERSATION 8 // taille de la conversation
-#define h_addr h_addr_list[0] // Résolution bug sur pc de la fac
+#define h_addr h_addr_list[0]
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,6 +20,7 @@
 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
 static const char N_CMD[] = "/n"; // Commande "changer de nom"
+static const char H_CMD[] = "/h"; // Commande "help"
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;

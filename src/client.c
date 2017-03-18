@@ -11,8 +11,7 @@ void *envoi(void *pArgs){
 	arg_thread_envoi *args = pArgs;
 
 	/* envoi du message */
-	if ((write(args->sock, args->mesg, strlen(args->mesg))) < 0) 
-		printf("erreur : impossible d'ecrire le message destine au serveur.\n"); // TODO changer de sortie !
+	int ret = write(args->sock, args->mesg, strlen(args->mesg));
 
 	pthread_exit(NULL);
 }
@@ -215,7 +214,7 @@ int main(int argc, char **argv) {
 
 		memset(message,0,sizeof(message));
 
-		wgetnstr(bas, message, TAILLE_MAX_MESSAGE);
+		wgetnstr(bas, message, TAILLE_MSG_SAISIE);
 
 		refresh_bas();
 
@@ -244,34 +243,37 @@ int main(int argc, char **argv) {
 				pch = strtok(NULL, " ");
 			}
 
-			if(strlen(partie1) == strlen(Q_CMD) && strcmp(partie1, Q_CMD) == 0){ // COMMANDE q (quitter le serveur)
+			if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
 				est_connecte = 0;
 			}
+			else{
+				if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
+					if(strlen(partie2) < TAILLE_MAX_PSEUDO){
+						strcpy(pseudo, partie2);
 
-			if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
-				if(strlen(partie2) < TAILLE_MAX_PSEUDO){
-					strcpy(pseudo, partie2);
+						attron(A_STANDOUT);
+						mvprintw(0, (COLS / 2) - (strlen(pseudo) / 2), pseudo);
+						attroff(A_STANDOUT);
+					}
 
-					// TODO FAIRE LA VERIFICATION QUE LE PSEUDO EXISTE PAS DEJA
+					refresh();
 				}
 
-				refresh();
-			}
+				/* clean du buffer message */
+				params_envoi.sock = socket_descriptor;
+				memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
+				strcpy(params_envoi.mesg, message);
 
-			/* clean du buffer message */
-			params_envoi.sock = socket_descriptor;
-			memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
-			strcpy(params_envoi.mesg, message);
+				if(pthread_create(&thread_envoi, NULL, envoi, (void *) &params_envoi) == -1) {
+					perror("pthread_create : probleme lors de la creation du thread d'envoi.");
+					exit(1);
+				}
 
-			if(pthread_create(&thread_envoi, NULL, envoi, (void *) &params_envoi) == -1) {
-				perror("pthread_create : probleme lors de la creation du thread d'envoi.");
-				exit(1);
-			}
-
-			/* on attend que le client ait prévenu le serveur de sa déconnexion avant de quitter */
-			if(est_connecte == 0){
-				(void) pthread_join(thread_reception, NULL);
-				endwin();
+				/* on attend que le client ait prévenu le serveur de sa déconnexion avant de quitter */
+				if(est_connecte == 0){
+					(void) pthread_join(thread_reception, NULL);
+					endwin();
+				}
 			}
 
 			free(pch);

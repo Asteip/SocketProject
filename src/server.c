@@ -22,7 +22,6 @@ void *connection(void *pArgs){
 	char mesg_erreur[TAILLE_MAX_MESSAGE];
 
 	int long_buffer = 0;
-	int est_connecte = 1;
 	int index_client = 0;
 	int cpt = 0;
 
@@ -57,9 +56,9 @@ void *connection(void *pArgs){
 	}
 
 	/* tant que l'utilisateur est connecté, on lit les messages reçus */
-	while((long_buffer = read(args->sock, buffer, sizeof(buffer))) > 0 && est_connecte == 1){
+	while((long_buffer = read(args->sock, buffer, sizeof(buffer))) > 0){
 
-		/* prétraitements du message reçu : on sépare la partie commande et options de la partie message */
+		/* prétraitements du message reçu : on sépare la partie commande et option de la partie message */
 
 		char *pch;
 
@@ -89,31 +88,15 @@ void *connection(void *pArgs){
 		/* Si le début de la ligne commence par "/" on regarde si c'est une commande existante */
 		if(buffer[0] == '/'){
 			
-			if(strlen(partie1) == strlen(Q_CMD) && strcmp(partie1, Q_CMD) == 0){ // COMMANDE q (quitter le serveur)
-				char whoQuit[TAILLE_MAX_MESSAGE];
-
-				strcpy(whoQuit, "* ");
-				strcat(whoQuit, args->pseudo);
-				strcat(whoQuit, " s'est déconnecté. *");
-
-				for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
-					
-					if((write(vector_int_get(list_client, i), whoQuit, strlen(whoQuit) + 1)) < 0){
-						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
-						insert_message_unsend(whoQuit, vector_int_get(list_client, i), 3);
-					}
-				}
-
-				est_connecte = 0;
-			}
-			else if(strlen(partie1) == strlen(W_CMD) && strcmp(partie1, W_CMD) == 0){ // COMMANDE w (message privé)
+			if(strlen(partie1) == strlen(W_CMD) && strcmp(partie1, W_CMD) == 0){ // COMMANDE w (message privé)
 				int dest = vector_char_search(list_pseudo, partie2);
 				char whoSend[TAILLE_MAX_MESSAGE];
 
 				if(dest != -1){
-					strcpy(whoSend, "(");
+					strcpy(whoSend, "[");
 					strcat(whoSend, args->pseudo);
-					strcat(whoSend, ") ");
+					strcat(whoSend, "]: ");
+					strcat(whoSend, "(w) ");
 					strcat(whoSend, partie3);
 
 					if((write(vector_int_get(list_client, dest), whoSend, strlen(whoSend) + 1)) < 0){
@@ -137,18 +120,13 @@ void *connection(void *pArgs){
 				}
 			}
 			else if(strlen(partie1) == strlen(L_CMD) && strcmp(partie1, L_CMD) == 0){ // COMMANDE l (liste les pseudos des clients connectes)
-				char *msg_list_pseudo;
 
-				msg_list_pseudo = join_strings(list_pseudo, vector_char_size(list_pseudo));
-
-				// TODO Checker si le nombre de caractères du pseudo dépasse les 255 caractères.
-				
-				if((write(args->sock, msg_list_pseudo, strlen(msg_list_pseudo) + 1)) < 0){
-					printf("erreur : impossible d'envoyer le message au client.\n");
-					insert_message_unsend(msg_list_pseudo, args->sock, 3);
-				}
-
-				free(msg_list_pseudo);
+				for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
+					if((write(args->sock, vector_char_get(list_pseudo,i), strlen(vector_char_get(list_pseudo,i)) + 1)) < 0){
+						printf("erreur : impossible d'envoyer le message au client.\n");
+						insert_message_unsend(vector_char_get(list_pseudo,i), args->sock, 3);
+					}
+				}				
 			}
 			else if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
 				char whoChange[TAILLE_MAX_MESSAGE];
@@ -171,29 +149,13 @@ void *connection(void *pArgs){
 					}
 				}
 				else{
-					strcpy(mesg_erreur, "Le pseudo existe déjà ou dépasse les 49 caractères autorisés.");
+					strcpy(mesg_erreur, "Le pseudo existe déjà ou dépasse les 19 caractères autorisés.");
 
 					if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client.\n");
 						insert_message_unsend(mesg_erreur, args->sock, 3);
 					}
 				}
-			}
-			else if(strlen(partie1) == strlen(H_CMD) && strcmp(partie1, H_CMD) == 0){ // COMMANDE h (help)
-				
-				char helpMsg[TAILLE_MAX_MESSAGE];
-				strcpy(helpMsg, "Commandes disponibles : \n");
-				strcat(helpMsg, "  /q : quitter\n");
-				strcat(helpMsg, "  /w <pseudo> : message privé\n");
-				strcat(helpMsg, "  /l : liste utilisateurs\n");
-				strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo\n");
-				strcat(helpMsg, "  /h : help\n");
-
-				if((write(args->sock, helpMsg, strlen(helpMsg) + 1)) < 0){
-					printf("erreur : impossible d'envoyer le message au client.\n");
-					insert_message_unsend(helpMsg, args->sock, 3);
-				}
-
 			}
 			else{
 				strcpy(mesg_erreur, "Cette commande n'existe pas. Tapez /h pour obtenir la liste des commandes disponibles.");
@@ -205,12 +167,19 @@ void *connection(void *pArgs){
 			}
 		}
 		else{
+			char whoSend[TAILLE_MAX_MESSAGE];
+
+			strcpy(whoSend, "[");
+			strcat(whoSend, args->pseudo);
+			strcat(whoSend, "]: ");
+			strcat(whoSend, buffer);
+
 			/* envoi du message a tous les autres utilisateurs */
 			for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
 				
-				if((write(vector_int_get(list_client, i), buffer, strlen(buffer) + 1)) < 0){
+				if((write(vector_int_get(list_client, i), whoSend, strlen(whoSend) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
-					insert_message_unsend(buffer, vector_int_get(list_client, i), 3);
+					insert_message_unsend(whoSend, vector_int_get(list_client, i), 3);
 				}
 			}
 		}
@@ -229,6 +198,23 @@ void *connection(void *pArgs){
 	/* Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté */
 	printf("Déconnexion du client %s (num : %d).\n", args->pseudo, args->sock);
 
+	/* On prévient les autres utilisateurs de sa déconnexion */
+	char whoQuit[TAILLE_MAX_MESSAGE];
+
+	strcpy(whoQuit, "* ");
+	strcat(whoQuit, args->pseudo);
+	strcat(whoQuit, " s'est déconnecté. *");
+
+	for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
+		if(vector_int_get(list_client, i) != args->sock){
+			if((write(vector_int_get(list_client, i), whoQuit, strlen(whoQuit) + 1)) < 0){
+				printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, i));
+				insert_message_unsend(whoQuit, vector_int_get(list_client, i), 3);
+			}
+		}
+	}
+
+	/* fermeture du socket et suppression du pseudo et du socket dans les listes */
 	close(args->sock);
 
 	index_client = vector_int_search(list_client, args->sock); // on calcul l'emplacement du client pour le supprimer.
@@ -244,7 +230,7 @@ void *connection(void *pArgs){
 void *renvoi_message_unsend(void *args){
 
 	/* tentative de renvoi des messages non envoyés */
-	for(;;){
+	while(1){
 		for(int i = 0 ; i < vector_char_size(list_unsend_msg) ; ++i){
 			char *msg = vector_char_get(list_unsend_msg, i);
 			int msg_sock = vector_int_get(list_unsend_sock, i);
@@ -278,38 +264,6 @@ void insert_message_unsend(char *message, int socket, int cpt){
 	vector_char_add(list_unsend_msg, cpy_message);
 	vector_int_add(list_unsend_sock, socket);
 	vector_int_add(list_unsend_cpt, cpt);
-}
-
-char* join_strings(vector_char *strings, int count){
-	char* str = NULL;
-	size_t total_length = 0;
-	size_t length = 0;
-	int i = 0;
-
-	for(i = 0 ; i < count ; i++){
-		total_length += strlen(vector_char_get(strings, i));
-		
-		if(vector_char_get(strings, i)[strlen(vector_char_get(strings, i))-1] != '\n')
-			++total_length; 
-	}
-
-	++total_length;     
-
-	str = (char*)malloc(total_length);
-	str[0] = '\0';
-
-
-	for(i = 0 ; i < count ; i++){
-		strcat(str, vector_char_get(strings, i));
-		length = strlen(str);
-
-		if(str[length-1] != '\n'){
-			str[length] = '\n';
-			str[length+1] = '\0';
-		}
-	}
-
-	return str;
 }
 
 int main(int argc, char **argv) {
@@ -394,7 +348,7 @@ int main(int argc, char **argv) {
     }
 
 	/* attente des connexions et traitement des donnees recues */
-	for(;;) {
+	while(1) {
 		longueur_adresse_courante = sizeof(adresse_client_courant);
 
 		/* clean du pseudo */
@@ -446,5 +400,5 @@ int main(int argc, char **argv) {
 		}
 	} 
 
-	exit(0);
+	return 0;
 }

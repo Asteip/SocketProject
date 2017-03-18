@@ -2,8 +2,8 @@
 #define SERVER_H
 
 #define TAILLE_MAX_NOM 256 // Taille max du nom de la machine
-#define TAILLE_MAX_MESSAGE 256 // Taille max d'un message
-#define TAILLE_MAX_PSEUDO 50 // Taille max d'un pseudo
+#define TAILLE_MAX_MESSAGE 256 // Taille max d'un message : 226 (message) + 20 (pseudo) + 10(marge)
+#define TAILLE_MAX_PSEUDO 20 // Taille max d'un pseudo
 #define h_addr h_addr_list[0] // Résolution bug sur pc de la fac
 
 #include <stdlib.h>
@@ -16,11 +16,9 @@
 #include <string.h>
 #include "vector.h"
 
-static const char Q_CMD[] = "/q"; // Commande "quitter"
 static const char W_CMD[] = "/w"; // Comamnde "message privé"
 static const char L_CMD[] = "/l"; // Commande "liste utilisateurs"
 static const char N_CMD[] = "/n"; // Commande "changer de nom"
-static const char H_CMD[] = "/h"; // Commande "help"
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
@@ -41,7 +39,5 @@ void *renvoi_message_unsend(void *);
 // AUTRES FONCTIONS
 
 void insert_message_unsend(char *, int , int);
-
-char *join_strings(vector_char *, int);
 
 #endif
