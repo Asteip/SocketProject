@@ -3,6 +3,9 @@
 /* entier égal à 1 tant que la connexion est établie */
 int est_connecte = 0;
 
+/* pseudo du client */
+char *pseudo;
+
 /* variables pour l'IHM */
 vector_char *list_message = NULL;
 WINDOW *haut, *bas;
@@ -25,16 +28,35 @@ void *reception(void *pArgs){
 	memset(buffer,0,sizeof(buffer));
 
 	while(est_connecte == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
-		char* message = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+		char *message = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+		char **splitMessage = traitementMessage(message);
+		
 		strcpy(message,buffer);
 
-		for(int i = vector_char_size(list_message) -1 ; i > 0; --i){
-			vector_char_set(list_message,i,vector_char_get(list_message,i-1));
+		if(strlen(splitMessage[0]) == strlen(N_CMD) && strstr(splitMessage[0], N_CMD) != NULL){
+			strcpy(pseudo, splitMessage[1]);
+
+			attron(A_STANDOUT);
+			mvprintw(0, (COLS / 2) - (strlen(pseudo) / 2), pseudo);
+			attroff(A_STANDOUT);
+
+			refresh();
+		}
+		else{
+			for(int i = vector_char_size(list_message) -1 ; i > 0; --i){
+				vector_char_set(list_message,i,vector_char_get(list_message,i-1));
+			}
+
+			vector_char_set(list_message,0,message);
+
+			refresh_haut();
 		}
 
-		vector_char_set(list_message,0,message);
+		/* libération de la mémoire */
+		for(int i = 0 ; i < 3 ; ++i)
+			free(splitMessage[i]);
 
-		refresh_haut();
+		free(splitMessage);
 
 		memset(buffer,0,sizeof(buffer));
 	}
@@ -57,7 +79,6 @@ void refresh_haut(){
 
 	for(int i=0; i < TAILLE_CONERSATION ; ++i){
 		mvwprintw(haut, (2*LINES)/3 -3 -i,2,vector_char_get(list_message,i));
-		
 	}
 
 	wrefresh(haut);
@@ -72,6 +93,45 @@ void refresh_bas(){
 	wrefresh(bas);
 
 	move(2*LINES/3 + 2, 1);
+}
+
+char **traitementMessage(char *message){
+	char **result = NULL;
+	char tmp_message[TAILLE_MAX_MESSAGE];
+	char *pch;
+	int cpt = 0;
+
+	result = malloc(sizeof(char*) * 3);
+	
+	for (int i = 0 ; i < 3 ; ++i) {
+	    result[i] = (char *) malloc(TAILLE_MAX_MESSAGE);
+	}
+
+	strcpy(tmp_message, message);
+	pch = strtok(tmp_message, " ");
+
+	while(pch != NULL){
+		
+		if(cpt == 0){
+			strcpy(result[0], pch);
+			++cpt;
+		}
+		else if(cpt == 1){
+			strcpy(result[1], pch);
+			++cpt;
+		}
+		else{
+			strcat(result[2], pch);
+			strcat(result[2], " ");
+			++cpt;
+		}
+
+		pch = strtok(NULL, " ");
+	}
+
+	free(pch);
+
+	return result;
 }
 
 int main(int argc, char **argv) {
@@ -93,9 +153,6 @@ int main(int argc, char **argv) {
 	/* nom de la machine distante */
 	char *host; 
 
-	/* pseudo du client */
-	char *pseudo;
-
 	/* thread pour l'envoi de message */
 	pthread_t thread_envoi;
 	arg_thread_envoi params_envoi;
@@ -104,14 +161,6 @@ int main(int argc, char **argv) {
 	/* thread pour la réception de message */
 	pthread_t thread_reception;
 	arg_thread_reception params_reception;
-
-	/* variables de pretraitements */
-	int cpt = 0;
-	
-	char tmp_message[TAILLE_MAX_MESSAGE];
-	char partie1[TAILLE_MAX_MESSAGE];
-	char partie2[TAILLE_MAX_MESSAGE];
-	char partie3[TAILLE_MAX_MESSAGE];
 
 	/**********************************/
 	/* initialisation de la connexion */
@@ -127,7 +176,7 @@ int main(int argc, char **argv) {
 	pseudo = argv[2];
 
 	if (strlen(pseudo) > TAILLE_MAX_PSEUDO - 1){
-		perror("erreur : le pseudo ne doit pas dépasser les 49 caracteres");
+		perror("erreur : le pseudo ne doit pas dépasser les 49 caracteres.");
 		exit(1);
 	}
 
@@ -140,7 +189,7 @@ int main(int argc, char **argv) {
 
 	/* copie caractere par caractere des infos de ptr_host vers adresse_locale */
 	bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
-	adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
+	adresse_locale.sin_family = AF_INET;
 
 	adresse_locale.sin_port = htons(5000);
 
@@ -201,16 +250,9 @@ int main(int argc, char **argv) {
 	/* affichage fenêtre du bas */
 	refresh_bas();
 
-
-	/* on clean les buffer avant de commencer */
-	memset(tmp_message,0,sizeof(tmp_message));
-	memset(partie1,0,sizeof(partie1));
-	memset(partie2,0,sizeof(partie2));
-	memset(partie3,0,sizeof(partie3));
-
 	while(est_connecte == 1){
 		char *message = malloc (sizeof (char) * TAILLE_MAX_MESSAGE);
-		char *pch;
+		char **splitMessage = NULL;
 
 		memset(message,0,sizeof(message));
 
@@ -218,48 +260,15 @@ int main(int argc, char **argv) {
 
 		refresh_bas();
 
-		/* traitement du message avant l'envoi */
 		if(message != NULL && (strcmp(message, "") != 0)){
 
-			strcpy(tmp_message, message);
-			pch = strtok(tmp_message, " ");
+			/* traitement du message avant l'envoi */
+			splitMessage = traitementMessage(message);
 
-			while(pch != NULL){
-				
-				if(cpt == 0){
-					strcpy(partie1, pch);
-					++cpt;
-				}
-				else if(cpt == 1){
-					strcpy(partie2, pch);
-					++cpt;
-				}
-				else{
-					strcat(partie3, pch);
-					strcat(partie3, " ");
-					++cpt;
-				}
-
-				pch = strtok(NULL, " ");
-			}
-
-			if(strlen(partie1) == strlen(Q_CMD) && strstr(partie1, Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
+			if(strlen(splitMessage[0]) == strlen(Q_CMD) && strstr(splitMessage[0], Q_CMD) != NULL){ // COMMANDE q (quitter le serveur)
 				est_connecte = 0;
 			}
 			else{
-				if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
-					if(strlen(partie2) < TAILLE_MAX_PSEUDO){
-						strcpy(pseudo, partie2);
-
-						attron(A_STANDOUT);
-						mvprintw(0, (COLS / 2) - (strlen(pseudo) / 2), pseudo);
-						attroff(A_STANDOUT);
-					}
-
-					refresh();
-				}
-
-				/* clean du buffer message */
 				params_envoi.sock = socket_descriptor;
 				memset(params_envoi.mesg,0,sizeof(params_envoi.mesg));
 				strcpy(params_envoi.mesg, message);
@@ -276,7 +285,11 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			free(pch);
+			/* libération de la mémoire */
+			for(int i = 0 ; i < 3 ; ++i)
+				free(splitMessage[i]);
+
+			free(splitMessage);
 			free(message);
 		}
 	}

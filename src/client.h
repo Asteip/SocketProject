@@ -19,6 +19,7 @@
 #include "vector.h"
 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
+static const char L_CMD[] = "/l"; // Commande "liste utilisateurs"
 static const char N_CMD[] = "/n"; // Commande "changer de nom"
 
 typedef struct sockaddr sockaddr;
@@ -47,4 +48,20 @@ void refresh_haut();
 
 void refresh_bas();
 
+// AUTRES FONCTIONS
+
+char **traitementMessage(char *);
+
 #endif
+
+
+/*
+char helpMsg[TAILLE_MAX_MESSAGE];
+strcpy(helpMsg, "Commandes disponibles : \n");
+strcat(helpMsg, "  /q : quitter\n");
+strcat(helpMsg, "  /w <pseudo> : message privé\n");
+strcat(helpMsg, "  /l : liste utilisateurs\n");
+strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo\n");
+strcat(helpMsg, "  /h : help\n");
+
+*/

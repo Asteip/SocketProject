@@ -40,4 +40,6 @@ void *renvoi_message_unsend(void *);
 
 void insert_message_unsend(char *, int , int);
 
+char **traitementMessage(char *);
+
 #endif

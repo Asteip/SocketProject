@@ -23,20 +23,9 @@ void *connection(void *pArgs){
 
 	int long_buffer = 0;
 	int index_client = 0;
-	int cpt = 0;
 
-	/* variables de pretraitements */
-	char tmp_buffer[TAILLE_MAX_MESSAGE];
-	char partie1[TAILLE_MAX_MESSAGE];
-	char partie2[TAILLE_MAX_MESSAGE];
-	char partie3[TAILLE_MAX_MESSAGE];
-
-	/* on clean les buffer avant de commencer */
+	/* on clean le buffer avant de commencer */
 	memset(buffer,0,sizeof(buffer));
-	memset(tmp_buffer,0,sizeof(tmp_buffer));
-	memset(partie1,0,sizeof(partie1));
-	memset(partie2,0,sizeof(partie2));
-	memset(partie3,0,sizeof(partie3));
 
 	printf("Connexion du client %s (num : %d).\n", args->pseudo, args->sock);
 
@@ -57,47 +46,23 @@ void *connection(void *pArgs){
 
 	/* tant que l'utilisateur est connecté, on lit les messages reçus */
 	while((long_buffer = read(args->sock, buffer, sizeof(buffer))) > 0){
+		char **splitMessage = NULL;
 
 		/* prétraitements du message reçu : on sépare la partie commande et option de la partie message */
-
-		char *pch;
-
-		cpt = 0;
-		strcpy(tmp_buffer, buffer);
-		pch = strtok(tmp_buffer, " ");
-
-		while(pch != NULL){
-			
-			if(cpt == 0){
-				strcpy(partie1, pch);
-				++cpt;
-			}
-			else if(cpt == 1){
-				strcpy(partie2, pch);
-				++cpt;
-			}
-			else{
-				strcat(partie3, pch);
-				strcat(partie3, " ");
-				++cpt;
-			}
-
-			pch = strtok(NULL, " ");
-		}
+		splitMessage = traitementMessage(buffer);
 		
 		/* Si le début de la ligne commence par "/" on regarde si c'est une commande existante */
 		if(buffer[0] == '/'){
 			
-			if(strlen(partie1) == strlen(W_CMD) && strcmp(partie1, W_CMD) == 0){ // COMMANDE w (message privé)
-				int dest = vector_char_search(list_pseudo, partie2);
+			if(strlen(splitMessage[0]) == strlen(W_CMD) && strcmp(splitMessage[0], W_CMD) == 0){ // COMMANDE w (message privé)
+				int dest = vector_char_search(list_pseudo, splitMessage[1]);
 				char whoSend[TAILLE_MAX_MESSAGE];
 
 				if(dest != -1){
 					strcpy(whoSend, "[");
 					strcat(whoSend, args->pseudo);
-					strcat(whoSend, "]: ");
-					strcat(whoSend, "(w) ");
-					strcat(whoSend, partie3);
+					strcat(whoSend, " (w)]: ");
+					strcat(whoSend, splitMessage[2]);
 
 					if((write(vector_int_get(list_client, dest), whoSend, strlen(whoSend) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client : %d.\n", vector_int_get(list_client, dest));
@@ -109,6 +74,11 @@ void *connection(void *pArgs){
 							insert_message_unsend(mesg_erreur, args->sock, 3);
 						}
 					}
+
+					if((write(args->sock, whoSend, strlen(whoSend) + 1)) < 0){
+						printf("erreur : impossible d'envoyer le message au client.\n");
+						insert_message_unsend(whoSend, args->sock, 3);
+					}
 				}
 				else{
 					strcpy(mesg_erreur, "Le client n'existe pas.");
@@ -119,26 +89,42 @@ void *connection(void *pArgs){
 					}
 				}
 			}
-			else if(strlen(partie1) == strlen(L_CMD) && strcmp(partie1, L_CMD) == 0){ // COMMANDE l (liste les pseudos des clients connectes)
+			else if(strlen(splitMessage[0]) == strlen(L_CMD) && strcmp(splitMessage[0], L_CMD) == 0){ // COMMANDE l (liste les pseudos des clients connectes)
 
 				for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
 					if((write(args->sock, vector_char_get(list_pseudo,i), strlen(vector_char_get(list_pseudo,i)) + 1)) < 0){
 						printf("erreur : impossible d'envoyer le message au client.\n");
 						insert_message_unsend(vector_char_get(list_pseudo,i), args->sock, 3);
 					}
+
+					sleep(1);
 				}				
 			}
-			else if(strlen(partie1) == strlen(N_CMD) && strcmp(partie1, N_CMD) == 0){ // COMMANDE n (changement de pseudo)
+			else if(strlen(splitMessage[0]) == strlen(N_CMD) && strcmp(splitMessage[0], N_CMD) == 0){ // COMMANDE n (changement de pseudo)
 				char whoChange[TAILLE_MAX_MESSAGE];
+				char modifNom[TAILLE_MAX_MESSAGE];
 
-				if(vector_char_search(list_pseudo,partie2) == -1 && strlen(partie2) < TAILLE_MAX_PSEUDO){
+				if(vector_char_search(list_pseudo,splitMessage[1]) == -1 && strlen(splitMessage[1]) < TAILLE_MAX_PSEUDO){
 					strcpy(whoChange, "* ");
 					strcat(whoChange, args->pseudo);
 					strcat(whoChange, " s'est renommé en ");
-					strcat(whoChange, partie2);
+					strcat(whoChange, splitMessage[1]);
 					strcat(whoChange, " *");
 
-					strcpy(args->pseudo, partie2);
+					strcpy(args->pseudo, splitMessage[1]);
+
+					/* on renvoi au client la commande /n suivi de son pseudo si ce dernier a été accepté */
+					strcpy(modifNom, N_CMD);
+					strcat(modifNom, " ");
+					strcat(modifNom, splitMessage[1]);
+
+					/* on autorise l'utilisateur à changer de nom si celui-ci respecte les conditions */
+					if((write(args->sock, modifNom, strlen(modifNom) + 1)) < 0){
+						printf("erreur : impossible d'envoyer le message au client.\n");
+						insert_message_unsend(modifNom, args->sock, 3);
+					}
+
+					sleep(1);
 
 					for(int i = 0 ; i < vector_int_size(list_client) ; ++i){
 					
@@ -158,7 +144,7 @@ void *connection(void *pArgs){
 				}
 			}
 			else{
-				strcpy(mesg_erreur, "Cette commande n'existe pas.");
+				strcpy(mesg_erreur, "Cette commande n'existe pas (/h pour la liste des commandes).");
 
 				if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
@@ -184,15 +170,14 @@ void *connection(void *pArgs){
 			}
 		}
 
-		/* Clean des buffer */
+		/* Clean du buffer */
 		memset(buffer,0,sizeof(buffer));
-		memset(tmp_buffer,0,sizeof(tmp_buffer));
-		memset(partie1,0,sizeof(partie1));
-		memset(partie2,0,sizeof(partie2));
-		memset(partie3,0,sizeof(partie3));
 
-		/* on libère la mémoire */
-		free(pch);
+		/* libération de la mémoire */
+		for(int i = 0 ; i < 3 ; ++i)
+			free(splitMessage[i]);
+
+		free(splitMessage);
 	}
 
 	/* Si le serveur ne reçoit plus de message d'un client alors celui-ci est considéré comme déconnecté */
@@ -264,6 +249,45 @@ void insert_message_unsend(char *message, int socket, int cpt){
 	vector_char_add(list_unsend_msg, cpy_message);
 	vector_int_add(list_unsend_sock, socket);
 	vector_int_add(list_unsend_cpt, cpt);
+}
+
+char **traitementMessage(char *message){
+	char **result = NULL;
+	char tmp_message[TAILLE_MAX_MESSAGE];
+	char *pch;
+	int cpt = 0;
+
+	result = malloc(sizeof(char*) * 3);
+	
+	for (int i = 0 ; i < 3 ; ++i) {
+	    result[i] = (char *) malloc(TAILLE_MAX_MESSAGE);
+	}
+
+	strcpy(tmp_message, message);
+	pch = strtok(tmp_message, " ");
+
+	while(pch != NULL){
+		
+		if(cpt == 0){
+			strcpy(result[0], pch);
+			++cpt;
+		}
+		else if(cpt == 1){
+			strcpy(result[1], pch);
+			++cpt;
+		}
+		else{
+			strcat(result[2], pch);
+			strcat(result[2], " ");
+			++cpt;
+		}
+
+		pch = strtok(NULL, " ");
+	}
+
+	free(pch);
+
+	return result;
 }
 
 int main(int argc, char **argv) {
