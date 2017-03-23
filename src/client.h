@@ -20,7 +20,6 @@
 
 static const char Q_CMD[] = "/q"; // Commande "quitter"
 static const char N_CMD[] = "/n"; // Commande "changer de nom"
-static const char H_CMD[] = "/h"; // Commande "help"
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;

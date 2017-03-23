@@ -158,7 +158,7 @@ void *connection(void *pArgs){
 				}
 			}
 			else{
-				strcpy(mesg_erreur, "Cette commande n'existe pas. Tapez /h pour obtenir la liste des commandes disponibles.");
+				strcpy(mesg_erreur, "Cette commande n'existe pas.");
 
 				if((write(args->sock, mesg_erreur, strlen(mesg_erreur) + 1)) < 0){
 					printf("erreur : impossible d'envoyer le message au client.\n");
