@@ -104,7 +104,7 @@ void *connection(void *pArgs){
 				char whoChange[TAILLE_MAX_MESSAGE];
 				char modifNom[TAILLE_MAX_MESSAGE];
 
-				if(vector_char_search(list_pseudo,splitMessage[1]) == -1 && strlen(splitMessage[1]) < TAILLE_MAX_PSEUDO){
+				if(vector_char_search(list_pseudo,splitMessage[1]) == -1 && strlen(splitMessage[1]) < TAILLE_MAX_PSEUDO && strlen(splitMessage[1]) > 0){
 					strcpy(whoChange, "* ");
 					strcat(whoChange, args->pseudo);
 					strcat(whoChange, " s'est renommé en ");

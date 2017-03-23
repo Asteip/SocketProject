@@ -28,10 +28,7 @@ void *reception(void *pArgs){
 	memset(buffer,0,sizeof(buffer));
 
 	while(est_connecte == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
-		char *message = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
-		char **splitMessage = traitementMessage(message);
-		
-		strcpy(message,buffer);
+		char **splitMessage = traitementMessage(buffer);
 
 		if(strlen(splitMessage[0]) == strlen(N_CMD) && strstr(splitMessage[0], N_CMD) != NULL){
 			strcpy(pseudo, splitMessage[1]);
@@ -43,6 +40,9 @@ void *reception(void *pArgs){
 			refresh();
 		}
 		else{
+			char *message = malloc (TAILLE_MAX_MESSAGE * sizeof (char));
+			strcpy(message,buffer);
+
 			for(int i = vector_char_size(list_message) -1 ; i > 0; --i){
 				vector_char_set(list_message,i,vector_char_get(list_message,i-1));
 			}

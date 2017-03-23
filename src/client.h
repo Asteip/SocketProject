@@ -63,5 +63,4 @@ strcat(helpMsg, "  /w <pseudo> : message privé\n");
 strcat(helpMsg, "  /l : liste utilisateurs\n");
 strcat(helpMsg, "  /n <nouveau nom> : changer de pseudo\n");
 strcat(helpMsg, "  /h : help\n");
-
 */
