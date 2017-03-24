@@ -261,6 +261,7 @@ char **traitementMessage(char *message){
 	
 	for (int i = 0 ; i < 3 ; ++i) {
 	    result[i] = (char *) malloc(TAILLE_MAX_MESSAGE);
+	    memset(result[i],0,sizeof(result[i]));
 	}
 
 	strcpy(tmp_message, message);

@@ -1,6 +1,6 @@
 # SocketProject
 
-Chat de type client-serveur. Projet rélisé par Alexis Bonnin et Sitraka Fidimihajamanana
+Chat de type client-serveur. Projet rélisé par Alexis Bonnin et Sitraka Fidimihajamanana.
 
 Installation
 ===============
