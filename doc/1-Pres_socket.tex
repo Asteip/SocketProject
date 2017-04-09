@@ -1,0 +1,31 @@
+\section{Présentation des sockets}
+
+    \subsection{Généralités}
+    Le socket est l'élément principal de ce projet. Il permet la connexion entre deux programmes et facilite ainsi l'envoi/recéption des données entre les deux processus. En effet, les deux processus doivent adopter un protocole de communication afin d'assurer l'échange de données. Deux modes de communication sont proposés :
+    \begin{itemize}
+        \item \textbf{le mode connecté} : comparable à une communication téléphonique utilisant le protocole TCP (détails ci-après). Dans ce mode de communication, une connexion durable est établie entre les deux processus, de telle façon que l’adresse de destination n’est pas nécessaire à chaque envoi de données.
+        \item \textbf{le mode déconnecté} (analogue à une communication par courrier), utilisant le protocole UDP. Ce mode nécessite l’adresse de destination à chaque envoi, et aucun accusé de réception n’est donné. Ni l'unicité ni la séquentialité des transferts n'est garantie. Ce mode n'est pas fiable, il peut y avoir des pertes.
+    \end{itemize}
+    
+    
+    \subsection{Le protocole TCP}
+     TCP, \textit{Transmission Control Protocol}, est un protocole de communication fiable en mode connecté. Dans le modèle Internet, aussi appelé modèle TCP/IP, TCP est situé au-dessus de IP. Dans le modèle OSI, il correspond à la couche transport, intermédiaire de la couche réseau et de la couche session. Une session TCP fonctionne en trois phases : 
+    \begin{itemize}
+        \item ouverture de la connexion
+        \item transfert des données
+        \item fermeture de la connexion
+    \end{itemize}
+    
+    Dans ce projet, ces trois phases sont effectués par les fonctions de socket ci-dessous :
+    \begin{itemize}
+        \item \textbf{connect(...) / accept(...)} \\
+        La fonction \textit{connect} établie une connexion avec un serveur. C'est une fonction bloquante, c'est-à-dire qu'elle ne rend la main que lorsque la connexion est effectivement établie ou s'il y a une erreur de connexion.\\
+        La fonction \textit{accept} est exécutée du côté du serveur, elle prend la première demande en attente. Elle crée ensuite un nouveau socket et retourne le déscripteur de ce socket. La connexion est alors établie entre le client et le serveur.
+        \item \textbf{read(...) / write(...)}\\
+        Ces fonctions sont nécessaires pour le transfert des données. Elles sont semblables aux fonctions d'écriture et lecture de fichiers.
+        
+        \item \textbf{close(...)}\\
+        Cette fonction permet de fermer un socket dont on donne le descripteur en paramètre. Dans le mode connecté, le système essaie d'envoyer les données restantes avant de fermer le socket.
+    \end{itemize}
+        
+    Le protocole TCP assure la bonne transmission des données (sans perte) mais aussi la séquentialité (l'ordre) de celles-ci. C'est pourquoi nous avons opté pour le mode connecté dans ce projet.

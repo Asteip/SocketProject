@@ -1,0 +1,59 @@
+\section{Cahier des charges}
+\label{sec:cahier-des-charges}
+
+    Cette partie présente les objectifs que nous nous sommes fixés au début du projet. Elle contient les fonctionnalités que nous avons pu implémenter et celles-que nous souhaitions mettre en place mais qui n'ont pas été implémentées. Vous trouverez donc les différentes spécifications de l'application, c'est-à-dire les fonctionnalités du chat.
+
+    \subsection{Fonctionnalités implémentées}
+    
+        \subsubsection{Envois de messages}
+            L'envoi de message est la fonctionnalité la plus importante de l'application. Un message envoyé par un client doit passer par le serveur pour être traité, puis envoyé au(x) destinataire(s).
+            
+            On distingue deux types de messages :            
+            \begin{itemize}
+                \item Les messages "basiques" : messages textuels
+                \item Les messages "évolués" : envoi de fichiers (.png, .txt, etc.)
+            \end{itemize}
+            
+            On détaillera dans cette partie l'envoi de messages basiques, l'envoi de messages évolués n'étant pas implémentée pour cette application, celui-ci sera expliqué dans la section~\ref{subsec:fct-non-implemente}.
+            
+            Tout d'abord, lorsqu'un client se connecte au serveur, il lui est possible d'envoyer des messages textuels. Par défaut, ce dernier est alors diffusé à tous les autres utilisateurs connectés. Il est possible de spécifier des commandes spéciales dans le messages (ces commandes seront détaillées dans la section~\ref{sec:detail-realisation}). Un client peut également choisir, via une de ces commandes, d'envoyer son message à un destinataire unique (fonction message privé). Ce dernier doit être connecté au serveur.          
+            
+        \subsubsection{Gestion de la connexion au serveur}
+            La connexion au serveur est obligatoire pour communiquer avec les autres clients. Cette fonctionnalité est donc essentielle et doit permettre à n'importe quel client connecté au réseau et connaissant l'adresse IP du serveur de se connecter.
+            
+            Tout d'abord, pour se connecter au serveur, le client doit fournir l'adresse IP de celui-ci ainsi qu'un pseudonyme unique. Si un client du même nom est déjà connecté au serveur alors l'utilisateur devra modifier son nom afin de se connecter. Les informations de chaque client sont stockées sur le serveur et ne sont pas toutes visibles des autres utilisateurs. Parmi ces informations, on retrouve le numéro de socket utilisé par le client ainsi que son pseudonyme.        
+        
+        \subsubsection{Gestion des erreurs}
+            La gestion des erreurs concerne en grande partie le serveur. En effet, si le message envoyé par un client ne peut être transmis, alors le serveur doit pouvoir gérer ce cas. 
+            
+            Pour le chat Kameleon, la gestion d'erreur suivante a été mise en place :    
+            \begin{itemize}
+                \item Si le serveur ne reçoit pas un message, l'utilisateur qui a envoyé le message reçoit une notification.
+                \item Tant qu'un message n'a pas été reçu par tous les utilisateurs, le serveur conserve le message dans une file d'attente. Si un utilisateur du salon n'a pas reçu le message (ie : erreur de transmission serveur -> client), alors le serveur renvoie à cet utilisateur, uniquement, le message. Dès que le message est reçu par tous les utilisateurs, le serveur supprime le message de sa file d'attente. Si le message ne peut pas être transmis à tous les utilisateurs au bout d'un certain temps alors le serveur supprime le message. 
+                \item Dans le cas d'un message privé, tant qu'un message n'a pas été reçu par son destinataire, le serveur conserve le message dans une file d'attente. Si le destinataire n'a pas reçu le message, alors le message est renvoyé. Dès que le message est reçu, le serveur supprime le message de sa file d'attente. Si le message ne peut pas être transmis au bout d'un certain temps, alors le serveur supprime le message et envoi une notification à l'émetteur.
+            \end{itemize}
+        
+    \subsection{Fonctionnalités non implentées}
+    \label{subsec:fct-non-implemente}
+        
+        \subsubsection{Gestion de salons}
+            La gestion de salon était une de nos premières idées quand à la réalisation du chat. En effet, nous souhaitions nous rapprocher le plus possible du mode de fonctionnement d'un chat tel que \href{https://www.skype.com/fr/}{Skype}. Nous n'avons malheureusement pas pu implémenter cette fonctionnalité.
+            
+            Un salon doit respecter les règles suivantes :
+            \begin{itemize}
+                \item Un salon est créé par un client, ce dernier devient alors l'administrateur de ce salon.
+                \item Chaque client peut ouvrir jusqu'à 3 salons.
+                \item L'administrateur d'un salon défini le nombre de personne maximum pouvant se connecter au salon.
+                \item Chaque client peut se connecter à un salon existant s'il reste de la place.
+                \item Un message envoyé par un client sur un salon est diffusé à tous les autres utilisateurs connectés à ce salon.
+                \item Lors de la connexion d'un client au serveur, ce dernier lui renvoi la liste des salons ouverts.
+            \end{itemize}
+        
+        \subsubsection{Envoi de messages "évolués"}
+            L'envoi de message dit "évolué" n'a pas été implémenté pour cette application. Ce type de message concerne l'envoi de petit fichiers tel que des images.
+            
+            L'envoi de fichier doit respecter les règles suivantes : 
+            \begin{itemize}
+                \item La taille totale du message ne doit pas dépasser 10Mo.
+                \item Le fichier doit pouvoir être lu et traité par le serveur.
+            \end{itemize}

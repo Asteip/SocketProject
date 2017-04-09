@@ -1,0 +1,51 @@
+\section{Détails de la réalisation}
+\label{sec:detail-realisation}
+    
+    Cette partie détaille les fonctionnalités qui ont été réalisées pour cette application ainsi que les possibles évolution de ces dernières. Elle présente également les difficultés rencontrées lors du développement.
+
+    \subsection{Fonctionnalités réalisées}
+        \paragraph{}
+        Tout d'abord, sur l'application cliente, nous avons géré l'envoi et la réception de messages avec deux thread. Le premier thread (\textit{envoi()}) est exécuté à chaque fois que l'utilisateur saisie un message et l'envoi. La fonction utilisée pour ce thread prend en paramètre le numéro du socket sur lequel le client est connecté ainsi que le message à envoyer. Le deuxième thread est lancé dès que le client se connecte au serveur et reste s'exécute tant que la connexion est active. La fonction utilisée pour ce thread requiert le numéro de socket utilisé sur le serveur afin de pouvoir rester à l'écoute de ce dernier. Ce thread se termine dans les cas suivants : si le client ferme le programme (Ctrl + c), si le serveur est inaccessible (fermeture du programme, coupure réseau, etc.) ou si le client se déconnecte du serveur. Le programme principal se termine une fois que tous les thread sont terminés.
+        
+        L'application cliente possède une interface graphique développée à l'aide de la librairie ncurses. Elle divise l'écran en deux parties : une fenêtre (en haut) permettant d'afficher les messages reçus du serveur et une fenêtre (en bas) permettant de saisir les messages à envoyer. Le nom de l'utilisateur est affiché en haut du terminal.
+        
+        \paragraph{}
+        Pour ce qui est de l'application serveur, celle-ci permet la gestion d'un nombre illimité de client. En effet, deux tableaux dynamiques (vecteurs) permettent de stocker pour chaque client connecté, d'une part les socket et d'autre part les pseudonymes. Ces tableaux sont remplis en parallèles, c'est-à-dire que le numéro de socket et le pseudo du client X sont sauvegardés à la même case dans les deux tableaux. Ainsi, lorsqu'un client se connecte ou se déconnecte ces deux tableaux sont mis à jour.
+        
+        Le serveur reste à l'écoute d'éventuels clients, chaque fois qu'un client se connecte, un numéro de socket lui est attribué et un nouveau thread est exécuté et reste actif le temps de la connexion du client. Nous utilisons donc le mode connecté des sockets, qui utilise le protocole TCP. Lorsqu'un client se déconnecte, le socket qu'il utilisait peut être réattribué à un nouveau client. Il reste cependant inutilisable pendant quelques instants après la déconnexion.
+        
+        Le serveur actuel ne gère qu'un seul salon. Tout client se connectant au serveur sera automatiquement ajouté à ce salon. Ainsi, lorsqu'un utilisateur envoi un message, ce dernier est diffusé à tous les autres client connectés au serveur. De plus, lorsqu'un client se connecte ou se déconnecte, une notification est envoyée à chaque client.
+        
+        Pour terminer, nous avons mis en place une gestion d'erreur côté serveur. Lorsqu'un message ne peut pas être transmis à un client (problème de réseau), le message, le socket du client destinataire ainsi qu'un compteur sont stockés dans trois tableaux différents à la même case. Un thread, démarré dès le lancement du serveur, est chargé de vider cette liste en permanence en renvoyant le message au destinataire en question. Le compteur permet de gérer le timeout : celui-ci est initialisé à une valeur X (3 la plupart du temps) et est décrémenté à chaque tour de boucle. Lorsqu'il tombe à zéro, le message non envoyé est supprimé de la liste
+        
+        \paragraph{}
+        Concernant l'application Kameleon en général, nous avons décidé d'imposer les règles suivantes : 
+        \begin{itemize}
+            \item La taille totale d'un message ne doit pas dépasser 255 caractères (226 caractères pour le message texte, 20 caractères pour le pseudonyme et 10 caractères de marge).
+            \item La taille d'un pseudo est limitée à 20 caractères.
+            \item Chaque pseudonyme est unique.
+        \end{itemize}
+        
+        \paragraph{}
+        Des commandes sont disponibles dans l'application. Chaque commandes doit être précédée d'un "/" et suivie des éventuelles options. Les commandes suivantes sont disponibles pour chaque client :
+        \begin{itemize}
+            \item \textbf{/q} : cette commande permet de quitter l'application, le client est alors déconnecté du serveur et son application se ferme.
+            
+            \item \textbf{/w} : cette commande permet d'envoyer un message privé. Elle doit être suivie du pseudonyme du destinataire. Si ce dernier n'est pas connecté alors le message d'erreur suivant est renvoyé à l'émetteur : "Le client n'existe pas".
+            
+            \item \textbf{/l} : cette commande permet de lister les pseudonymes des utilisateurs actuellement connectés au serveur.
+            
+            \item \textbf{/n} : cette commande permet à un client de changer son pseudonyme. Elle doit être suivie d'un nouveau nom respectant les règles établies précédemment (taille limitée à 20 et nom unique). Si le nom ne respecte pas une des règles, alors un message d'erreur est renvoyé au client.
+            
+            \item \textbf{/h} : cette commande permet d'afficher l'aide, c'est-à-dire les différentes commandes existantes.
+        \end{itemize}
+    
+    \subsection{Évolutions de l'application et problèmes persistants}
+        \paragraph{}
+        Des problèmes subsistent dans la dernière version de l'application. Nous avons en effet rencontré certaines difficultés concernant la gestion des chaînes de caractères en C et plus particulièrement sur l'affichage avec ncurses. Ainsi, l'envoi d'une chaîne de caractère trop longue pour être affichée sur une seule ligne entraînera des bugs graphiques. De plus, il arrive que lors du lancement de l'application cliente, des caractères apparaissent à l'écran. Ceci est dû à la libraire ncurses qui n'est pas thread safe et qui peut ainsi occasionner des bugs graphiques lorsqu'elle s'initialise mal. 
+        
+        Concernant la commande "/l", nous avons réussit à contourner le problème d'affichage sur une ligne en modifiant la forme de la réponse. Ainsi, le serveur n'enverra pas la liste complète des utilisateurs connectés en un seul message mais enverra un message pour chaque utilisateur connecté contenant un seul pseudonyme suivi d'un délais, afin d'éviter les problèmes de buffer dans l'affichage.
+        
+        \paragraph{}
+        Concernant les évolutions possibles de l'application, l'ajout d'un système de salon géré par les clients pourrait être envisagé. Il pourrait également être possible d'envoyer des fichiers, qui seraient alors transmis différemment des messages textuels.
+        

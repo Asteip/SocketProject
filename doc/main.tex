@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+
+% ENCODAGE CARACTERES
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[frenchb]{babel}
+
+% MISE EN FORME
+\usepackage[left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage[colorlinks=true,urlcolor=blue]{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{pifont}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{placeins}
+
+\hypersetup{linkcolor=blue}
+
+\frenchbsetup{StandardLists=true}
+\setitemize[0]{font=\color{black},label=\ding{227},itemsep=0pt}
+
+\title{Projet Kameleon - Dossier de synthèse}
+\author{Ny Sitraka FIDIMIHAJAMANANA \and Alexis BONNIN}
+\date{Avril 2017}
+
+\begin{document}
+
+\maketitle
+\begin{abstract}
+    Vous trouverez dans ce document un dossier de synthèse du projet Kameleon. Ce dernier a consisté au développement d'une application client/serveur mettant en oeuvre un protocole de communication en réseau.
+\end{abstract}
+\tableofcontents
+\newpage
+
+\section{Introduction}
+    
+    \paragraph{}
+    Le projet Kameleon s'inscrit dans le module "Réseaux" du master ALMA et a consisté en la réalisation d'un Chat en mode client/serveur. Cette application gère des échanges de messages entre des machines distantes via un serveur qui administre les connexions des utilisateurs. L'application est divisée en deux parties : une partie "serveur" déployée sur un seul poste et une partie "cliente" utilisée simultanément sur plusieurs postes. L'objectif du projet était de mieux comprendre le mécanisme de socket du modèle TCP/IP. Vous trouverez dans ce rapport une présentation des sockets, une description du protocole implémenté, le détail de la réalisation ainsi que des jeux d'essais du programme.
+
+    \paragraph{}
+    Le projet est disponible sur github à l'adresse : \url{https://github.com/Asteip/SocketProject.git}. Pour installer le projet, il suffit d'exécuter la commande \textit{make} à la racine du répertoire. Le programme peut ensuite être exécuté avec les commandes suivantes :
+    
+    \begin{enumerate}
+        \item Lancer le serveur :
+        \begin{lstlisting}[language=bash,captionpos=b]
+        $ ./server
+        \end{lstlisting}
+        
+        \item Lancer un client :
+        \begin{lstlisting}[language=bash,captionpos=b]
+        # adresse-serveur : adresse IP du serveur distant
+        # pseudo : pseudo du client, ce dernier ne doit 
+        # pas contenir d'espace.
+        $ ./client <adresse-serveur> <pseudo (sans espace)>
+        \end{lstlisting}
+    \end{enumerate}
+    
+    Il se peut que le client ne fonctionne pas correctement lors du lancement de celui-ci et que des caractères étranges apparaissent à l'écran. Pour corriger ce problème, il suffit de relancer le client.    
+
+\input{1-Pres_socket}
+\input{2-Impl_protocole}
+\input{3-Detail_realisation}
+\input{4-Jeux_essais}
+
+\FloatBarrier
+
+\section{Conclusion}
+    
+    Ce projet nous a permis de comprendre le fonctionnement des sockets. Nous avons pu développer une application fonctionnelle avec une interface terminale assez correcte: Kameleon. Cette dernière a pu illustrer les différents enjeux d'utilisation des sockets en mode connecté. On a pu revoir ainsi les principes de fonctionnement du protocole TCP. Les difficultés rencontrées sont principalement liées à l'interface: l'affichage des caractères avec une présentation correcte.      
+    
+\end{document}
