@@ -27,6 +27,15 @@ void *reception(void *pArgs){
 
 	memset(buffer,0,sizeof(buffer));
 
+	/* message à afficher si l'utilisateur demande l'aide */
+	char helpMsg[6][TAILLE_MAX_MESSAGE];
+	strcpy(helpMsg[0], "Commandes disponibles : \n");
+	strcat(helpMsg[1], "  /q : quitter\n");
+	strcat(helpMsg[2], "  /w <pseudo> : message privé\n");
+	strcat(helpMsg[3], "  /l : liste utilisateurs\n");
+	strcat(helpMsg[4], "  /n <nouveau nom> : changer de pseudo\n");
+	strcat(helpMsg[5], "  /h : help\n");
+
 	while(est_connecte == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
 		char **splitMessage = traitementMessage(buffer);
 
@@ -38,6 +47,18 @@ void *reception(void *pArgs){
 			attroff(A_STANDOUT);
 
 			refresh();
+		}
+		else if(strlen(splitMessage[0]) == strlen(H_CMD) && strstr(splitMessage[0], H_CMD) != NULL){
+			
+
+			for(int nbh = 0 ; nbh < 6 ; ++nbh){
+				for(int i = vector_char_size(list_message) -1 ; i > 0; --i){
+					vector_char_set(list_message,i,vector_char_get(list_message,i-1));
+				}
+				vector_char_set(list_message,0,helpMsg[nbh]);
+			}
+
+			refresh_haut();
 		}
 		else{
 			char *message = malloc (TAILLE_MAX_MESSAGE * sizeof (char));

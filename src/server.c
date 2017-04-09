@@ -100,6 +100,14 @@ void *connection(void *pArgs){
 					sleep(1);
 				}				
 			}
+			else if(strlen(splitMessage[0]) == strlen(H_CMD) && strcmp(splitMessage[0], H_CMD) == 0){ // COMMANDE h (help)
+
+				/* on ne fait que renvoyer la commande brute à l'utilisateur pour qu'il puisse afficher l'aide chez lui */
+				if((write(args->sock, splitMessage[0], strlen(splitMessage[0]) + 1)) < 0){
+					printf("erreur : impossible d'envoyer le message au client.\n");
+					insert_message_unsend(splitMessage[0], args->sock, 3);
+				}				
+			}
 			else if(strlen(splitMessage[0]) == strlen(N_CMD) && strcmp(splitMessage[0], N_CMD) == 0){ // COMMANDE n (changement de pseudo)
 				char whoChange[TAILLE_MAX_MESSAGE];
 				char modifNom[TAILLE_MAX_MESSAGE];

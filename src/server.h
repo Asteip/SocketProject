@@ -19,6 +19,7 @@
 static const char W_CMD[] = "/w"; // Comamnde "message privé"
 static const char L_CMD[] = "/l"; // Commande "liste utilisateurs"
 static const char N_CMD[] = "/n"; // Commande "changer de nom"
+static const char H_CMD[] = "/h"; // Commande "help"
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
