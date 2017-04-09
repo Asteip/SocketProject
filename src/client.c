@@ -39,7 +39,7 @@ void *reception(void *pArgs){
 	while(est_connecte == 1 && (buffer_size = read(args->sock, buffer, sizeof(buffer))) > 0) {		
 		char **splitMessage = traitementMessage(buffer);
 
-		if(strlen(splitMessage[0]) == strlen(N_CMD) && strstr(splitMessage[0], N_CMD) != NULL){
+		if(strlen(splitMessage[0]) == strlen(N_CMD) && strstr(splitMessage[0], N_CMD) != NULL){ // Commande renommage
 			strcpy(pseudo, splitMessage[1]);
 
 			attron(A_STANDOUT);
@@ -48,7 +48,7 @@ void *reception(void *pArgs){
 
 			refresh();
 		}
-		else if(strlen(splitMessage[0]) == strlen(H_CMD) && strstr(splitMessage[0], H_CMD) != NULL){
+		else if(strlen(splitMessage[0]) == strlen(H_CMD) && strstr(splitMessage[0], H_CMD) != NULL){ // Commande help
 			
 
 			for(int nbh = 0 ; nbh < 6 ; ++nbh){

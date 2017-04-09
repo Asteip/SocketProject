@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
 	list_unsend_cpt = vector_int_create();
 	
 	/* recuperation de la structure d'adresse en utilisant le nom */
-	if ((ptr_hote = gethostbyname(machine)) == NULL) { // TODO changer en "machine". Temporaire -> problème avec le pc de Sitraka
+	if ((ptr_hote = gethostbyname(machine)) == NULL) {
 		perror("erreur : impossible de trouver le serveur a partir de son nom.");
 		exit(1);
 	}

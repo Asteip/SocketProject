@@ -3,7 +3,7 @@
 
 #define TAILLE_MAX_MESSAGE 256 // Taille max d'un message : 226 (message) + 20 (pseudo) + 10(marge)
 #define TAILLE_MSG_SAISIE 226
-#define TAILLE_MAX_PSEUDO 50
+#define TAILLE_MAX_PSEUDO 20
 #define TAILLE_CONERSATION 8 // taille de la conversation
 #define h_addr h_addr_list[0]
 
